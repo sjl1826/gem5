@@ -232,7 +232,7 @@ class RegValOperand(RegOperand):
             RegVal final_val = {reg_val};
             xc->setRegOperand(this, {self.dest_reg_idx}, final_val);
             if (traceData) {{
-                traceData->setData(final_val);
+                traceData->setData({self.reg_class}, final_val);
             }}
         }}'''
 
@@ -357,7 +357,7 @@ class VecRegOperand(RegOperand):
     def makeWrite(self):
         wb = f'''
         if (traceData) {{
-            traceData->setData(tmp_d{self.dest_reg_idx});
+            traceData->setData({self.reg_class}, &tmp_d{self.dest_reg_idx});
         }}
         '''
         return wb
@@ -402,7 +402,7 @@ class VecPredRegOperand(RegOperand):
     def makeWrite(self):
         wb = f'''
         if (traceData) {{
-            traceData->setData(tmp_d{self.dest_reg_idx});
+            traceData->setData({self.reg_class}, &tmp_d{self.dest_reg_idx});
         }}
         '''
         return wb
@@ -452,7 +452,7 @@ class ControlRegOperand(Operand):
              f'{self.dest_reg_idx}, {self.base_name});\n'
         wb += f'''
         if (traceData) {{
-            traceData->setData({self.base_name});
+            traceData->setData({self.reg_class}, {self.base_name});
         }}
         '''
 

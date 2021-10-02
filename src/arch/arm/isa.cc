@@ -580,12 +580,12 @@ ISA::copyRegsFrom(ThreadContext *src)
 }
 
 RegVal
-ISA::readMiscRegNoEffect(int misc_reg) const
+ISA::readMiscRegNoEffect(RegIndex idx) const
 {
-    assert(misc_reg < NUM_MISCREGS);
+    assert(idx < NUM_MISCREGS);
 
-    const auto &reg = lookUpMiscReg[misc_reg]; // bit masks
-    const auto &map = getMiscIndices(misc_reg);
+    const auto &reg = lookUpMiscReg[idx]; // bit masks
+    const auto &map = getMiscIndices(idx);
     int lower = map.first, upper = map.second;
     // NB!: apply architectural masks according to desired register,
     // despite possibly getting value from different (mapped) register.
@@ -593,24 +593,24 @@ ISA::readMiscRegNoEffect(int misc_reg) const
                                           |(miscRegs[upper] << 32));
     if (val & reg.res0()) {
         DPRINTF(MiscRegs, "Reading MiscReg %s with set res0 bits: %#x\n",
-                miscRegName[misc_reg], val & reg.res0());
+                miscRegName[idx], val & reg.res0());
     }
     if ((val & reg.res1()) != reg.res1()) {
         DPRINTF(MiscRegs, "Reading MiscReg %s with clear res1 bits: %#x\n",
-                miscRegName[misc_reg], (val & reg.res1()) ^ reg.res1());
+                miscRegName[idx], (val & reg.res1()) ^ reg.res1());
     }
     return (val & ~reg.raz()) | reg.rao(); // enforce raz/rao
 }
 
 
 RegVal
-ISA::readMiscReg(int misc_reg)
+ISA::readMiscReg(RegIndex idx)
 {
     CPSR cpsr = 0;
     SCR scr = 0;
 
-    if (misc_reg == MISCREG_CPSR) {
-        cpsr = miscRegs[misc_reg];
+    if (idx == MISCREG_CPSR) {
+        cpsr = miscRegs[idx];
         auto pc = tc->pcState().as<PCState>();
         cpsr.j = pc.jazelle() ? 1 : 0;
         cpsr.t = pc.thumb() ? 1 : 0;
@@ -618,18 +618,18 @@ ISA::readMiscReg(int misc_reg)
     }
 
 #ifndef NDEBUG
-    if (!miscRegInfo[misc_reg][MISCREG_IMPLEMENTED]) {
-        if (miscRegInfo[misc_reg][MISCREG_WARN_NOT_FAIL])
+    if (!miscRegInfo[idx][MISCREG_IMPLEMENTED]) {
+        if (miscRegInfo[idx][MISCREG_WARN_NOT_FAIL])
             warn("Unimplemented system register %s read.\n",
-                 miscRegName[misc_reg]);
+                 miscRegName[idx]);
         else
             panic("Unimplemented system register %s read.\n",
-                  miscRegName[misc_reg]);
+                  miscRegName[idx]);
     }
 #endif
-    misc_reg = redirectRegVHE(misc_reg);
+    idx = redirectRegVHE(idx);
 
-    switch (unflattenMiscReg(misc_reg)) {
+    switch (unflattenMiscReg(idx)) {
       case MISCREG_HCR:
       case MISCREG_HCR2:
             if (!release->has(ArmExtension::VIRTUALIZATION))
@@ -659,7 +659,7 @@ ISA::readMiscReg(int misc_reg)
             RegVal val = readMiscRegNoEffect(MISCREG_CPACR);
             val &= cpacrMask;
             DPRINTF(MiscRegs, "Reading misc reg %s: %#x\n",
-                    miscRegName[misc_reg], val);
+                    miscRegName[idx], val);
             return val;
         }
       case MISCREG_MPIDR:
@@ -668,14 +668,14 @@ ISA::readMiscReg(int misc_reg)
       case MISCREG_VMPIDR:
       case MISCREG_VMPIDR_EL2:
         // top bit defined as RES1
-        return readMiscRegNoEffect(misc_reg) | 0x80000000;
+        return readMiscRegNoEffect(idx) | 0x80000000;
       case MISCREG_ID_AFR0: // not implemented, so alias MIDR
       case MISCREG_REVIDR:  // not implemented, so alias MIDR
       case MISCREG_MIDR:
         cpsr = readMiscRegNoEffect(MISCREG_CPSR);
         scr  = readMiscRegNoEffect(MISCREG_SCR);
         if ((cpsr.mode == MODE_HYP) || isSecure(tc)) {
-            return readMiscRegNoEffect(misc_reg);
+            return readMiscRegNoEffect(idx);
         } else {
             return readMiscRegNoEffect(MISCREG_VPIDR);
         }
@@ -733,7 +733,7 @@ ISA::readMiscReg(int misc_reg)
       case MISCREG_PMINTENSET_EL1 ... MISCREG_PMOVSSET_EL0:
       case MISCREG_PMEVCNTR0_EL0 ... MISCREG_PMEVTYPER5_EL0:
       case MISCREG_PMCR ... MISCREG_PMOVSSET:
-        return pmu->readMiscReg(misc_reg);
+        return pmu->readMiscReg(idx);
 
       case MISCREG_CPSR_Q:
         panic("shouldn't be reading this register seperately\n");
@@ -850,7 +850,7 @@ ISA::readMiscReg(int misc_reg)
         return 0x04;  // DC ZVA clear 64-byte chunks
       case MISCREG_HCPTR:
         {
-            RegVal val = readMiscRegNoEffect(misc_reg);
+            RegVal val = readMiscRegNoEffect(idx);
             // The trap bit associated with CP14 is defined as RAZ
             val &= ~(1 << 14);
             // If a CP bit in NSACR is 0 then the corresponding bit in
@@ -901,27 +901,27 @@ ISA::readMiscReg(int misc_reg)
       // Generic Timer registers
       case MISCREG_CNTFRQ ... MISCREG_CNTVOFF:
       case MISCREG_CNTFRQ_EL0 ... MISCREG_CNTVOFF_EL2:
-        return getGenericTimer().readMiscReg(misc_reg);
+        return getGenericTimer().readMiscReg(idx);
 
       case MISCREG_ICC_AP0R0 ... MISCREG_ICH_LRC15:
       case MISCREG_ICC_PMR_EL1 ... MISCREG_ICC_IGRPEN1_EL3:
       case MISCREG_ICH_AP0R0_EL2 ... MISCREG_ICH_LR15_EL2:
-        return getGICv3CPUInterface().readMiscReg(misc_reg);
+        return getGICv3CPUInterface().readMiscReg(idx);
 
       default:
         break;
 
     }
-    return readMiscRegNoEffect(misc_reg);
+    return readMiscRegNoEffect(idx);
 }
 
 void
-ISA::setMiscRegNoEffect(int misc_reg, RegVal val)
+ISA::setMiscRegNoEffect(RegIndex idx, RegVal val)
 {
-    assert(misc_reg < NUM_MISCREGS);
+    assert(idx < NUM_MISCREGS);
 
-    const auto &reg = lookUpMiscReg[misc_reg]; // bit masks
-    const auto &map = getMiscIndices(misc_reg);
+    const auto &reg = lookUpMiscReg[idx]; // bit masks
+    const auto &map = getMiscIndices(idx);
     int lower = map.first, upper = map.second;
 
     auto v = (val & ~reg.wi()) | reg.rao();
@@ -929,23 +929,23 @@ ISA::setMiscRegNoEffect(int misc_reg, RegVal val)
         miscRegs[lower] = bits(v, 31, 0);
         miscRegs[upper] = bits(v, 63, 32);
         DPRINTF(MiscRegs, "Writing MiscReg %s (%d %d:%d) : %#x\n",
-                miscRegName[misc_reg], misc_reg, lower, upper, v);
+                miscRegName[idx], idx, lower, upper, v);
     } else {
         miscRegs[lower] = v;
         DPRINTF(MiscRegs, "Writing MiscReg %s (%d %d) : %#x\n",
-                miscRegName[misc_reg], misc_reg, lower, v);
+                miscRegName[idx], idx, lower, v);
     }
 }
 
 void
-ISA::setMiscReg(int misc_reg, RegVal val)
+ISA::setMiscReg(RegIndex idx, RegVal val)
 {
 
     RegVal newVal = val;
     bool secure_lookup;
     SCR scr;
 
-    if (misc_reg == MISCREG_CPSR) {
+    if (idx == MISCREG_CPSR) {
         updateRegMap(val);
 
 
@@ -957,7 +957,7 @@ ISA::setMiscReg(int misc_reg, RegVal val)
         }
 
         DPRINTF(Arm, "Updating CPSR from %#x to %#x f:%d i:%d a:%d mode:%#x\n",
-                miscRegs[misc_reg], cpsr, cpsr.f, cpsr.i, cpsr.a, cpsr.mode);
+                miscRegs[idx], cpsr, cpsr.f, cpsr.i, cpsr.a, cpsr.mode);
         PCState pc = tc->pcState().as<PCState>();
         pc.nextThumb(cpsr.t);
         pc.nextJazelle(cpsr.j);
@@ -976,7 +976,7 @@ ISA::setMiscReg(int misc_reg, RegVal val)
             tc->pcState(pc);
         }
 
-        setMiscRegNoEffect(misc_reg, newVal);
+        setMiscRegNoEffect(idx, newVal);
 
         if (old_mode != cpsr.mode) {
             getMMUPtr(tc)->invalidateMiscReg();
@@ -995,18 +995,18 @@ ISA::setMiscReg(int misc_reg, RegVal val)
         }
     } else {
 #ifndef NDEBUG
-        if (!miscRegInfo[misc_reg][MISCREG_IMPLEMENTED]) {
-            if (miscRegInfo[misc_reg][MISCREG_WARN_NOT_FAIL])
+        if (!miscRegInfo[idx][MISCREG_IMPLEMENTED]) {
+            if (miscRegInfo[idx][MISCREG_WARN_NOT_FAIL])
                 warn("Unimplemented system register %s write with %#x.\n",
-                    miscRegName[misc_reg], val);
+                    miscRegName[idx], val);
             else
                 panic("Unimplemented system register %s write with %#x.\n",
-                    miscRegName[misc_reg], val);
+                    miscRegName[idx], val);
         }
 #endif
-        misc_reg = redirectRegVHE(misc_reg);
+        idx = redirectRegVHE(idx);
 
-        switch (unflattenMiscReg(misc_reg)) {
+        switch (unflattenMiscReg(idx)) {
           case MISCREG_CPACR:
             {
 
@@ -1034,7 +1034,7 @@ ISA::setMiscReg(int misc_reg, RegVal val)
                 newVal &= cpacrMask;
                 newVal |= old_val & ~cpacrMask;
                 DPRINTF(MiscRegs, "Writing misc reg %s: %#x\n",
-                        miscRegName[misc_reg], newVal);
+                        miscRegName[idx], newVal);
             }
             break;
           case MISCREG_CPACR_EL1:
@@ -1048,7 +1048,7 @@ ISA::setMiscReg(int misc_reg, RegVal val)
                 }
                 newVal &= cpacrMask;
                 DPRINTF(MiscRegs, "Writing misc reg %s: %#x\n",
-                        miscRegName[misc_reg], newVal);
+                        miscRegName[idx], newVal);
             }
             break;
           case MISCREG_CPTR_EL2:
@@ -1074,7 +1074,7 @@ ISA::setMiscReg(int misc_reg, RegVal val)
                 cptrMask.res1_9_el2 = ones;
                 newVal |= cptrMask;
                 DPRINTF(MiscRegs, "Writing misc reg %s: %#x\n",
-                        miscRegName[misc_reg], newVal);
+                        miscRegName[idx], newVal);
             }
             break;
           case MISCREG_CPTR_EL3:
@@ -1089,7 +1089,7 @@ ISA::setMiscReg(int misc_reg, RegVal val)
                 }
                 newVal &= cptrMask;
                 DPRINTF(MiscRegs, "Writing misc reg %s: %#x\n",
-                        miscRegName[misc_reg], newVal);
+                        miscRegName[idx], newVal);
             }
             break;
           case MISCREG_CSSELR:
@@ -1152,7 +1152,7 @@ ISA::setMiscReg(int misc_reg, RegVal val)
                 newVal = (newVal & (uint32_t)fpscrMask) |
                          (readMiscRegNoEffect(MISCREG_FPSCR) &
                           ~(uint32_t)fpscrMask);
-                misc_reg = MISCREG_FPSCR;
+                idx = MISCREG_FPSCR;
             }
             break;
           case MISCREG_FPCR:
@@ -1169,28 +1169,28 @@ ISA::setMiscReg(int misc_reg, RegVal val)
                 newVal = (newVal & (uint32_t)fpscrMask) |
                          (readMiscRegNoEffect(MISCREG_FPSCR) &
                           ~(uint32_t)fpscrMask);
-                misc_reg = MISCREG_FPSCR;
+                idx = MISCREG_FPSCR;
             }
             break;
           case MISCREG_CPSR_Q:
             {
                 assert(!(newVal & ~CpsrMaskQ));
                 newVal = readMiscRegNoEffect(MISCREG_CPSR) | newVal;
-                misc_reg = MISCREG_CPSR;
+                idx = MISCREG_CPSR;
             }
             break;
           case MISCREG_FPSCR_QC:
             {
                 newVal = readMiscRegNoEffect(MISCREG_FPSCR) |
                          (newVal & FpscrQcMask);
-                misc_reg = MISCREG_FPSCR;
+                idx = MISCREG_FPSCR;
             }
             break;
           case MISCREG_FPSCR_EXC:
             {
                 newVal = readMiscRegNoEffect(MISCREG_FPSCR) |
                          (newVal & FpscrExcMask);
-                misc_reg = MISCREG_FPSCR;
+                idx = MISCREG_FPSCR;
             }
             break;
           case MISCREG_FPEXC:
@@ -1557,7 +1557,7 @@ ISA::setMiscReg(int misc_reg, RegVal val)
           case MISCREG_PMINTENSET_EL1 ... MISCREG_PMOVSSET_EL0:
           case MISCREG_PMEVCNTR0_EL0 ... MISCREG_PMEVTYPER5_EL0:
           case MISCREG_PMCR ... MISCREG_PMOVSSET:
-            pmu->setMiscReg(misc_reg, newVal);
+            pmu->setMiscReg(idx, newVal);
             break;
 
 
@@ -1583,10 +1583,10 @@ ISA::setMiscReg(int misc_reg, RegVal val)
                 break;
             }
           case MISCREG_HDFAR: // alias for secure DFAR
-            misc_reg = MISCREG_DFAR_S;
+            idx = MISCREG_DFAR_S;
             break;
           case MISCREG_HIFAR: // alias for secure IFAR
-            misc_reg = MISCREG_IFAR_S;
+            idx = MISCREG_IFAR_S;
             break;
           case MISCREG_ATS1CPR:
             addressTranslation(MMU::S1CTran, BaseMMU::Read, 0, val);
@@ -1725,7 +1725,7 @@ ISA::setMiscReg(int misc_reg, RegVal val)
                 CPSR cpsr = miscRegs[MISCREG_CPSR];
                 cpsr.daif = (uint8_t) ((CPSR) newVal).daif;
                 newVal = cpsr;
-                misc_reg = MISCREG_CPSR;
+                idx = MISCREG_CPSR;
             }
             break;
           case MISCREG_SP_EL0:
@@ -1742,7 +1742,7 @@ ISA::setMiscReg(int misc_reg, RegVal val)
                 CPSR cpsr = miscRegs[MISCREG_CPSR];
                 cpsr.sp = (uint8_t) ((CPSR) newVal).sp;
                 newVal = cpsr;
-                misc_reg = MISCREG_CPSR;
+                idx = MISCREG_CPSR;
             }
             break;
           case MISCREG_CURRENTEL:
@@ -1750,7 +1750,7 @@ ISA::setMiscReg(int misc_reg, RegVal val)
                 CPSR cpsr = miscRegs[MISCREG_CPSR];
                 cpsr.el = (uint8_t) ((CPSR) newVal).el;
                 newVal = cpsr;
-                misc_reg = MISCREG_CPSR;
+                idx = MISCREG_CPSR;
             }
             break;
           case MISCREG_PAN:
@@ -1761,7 +1761,7 @@ ISA::setMiscReg(int misc_reg, RegVal val)
                 CPSR cpsr = miscRegs[MISCREG_CPSR];
                 cpsr.pan = (uint8_t) ((CPSR) newVal).pan;
                 newVal = cpsr;
-                misc_reg = MISCREG_CPSR;
+                idx = MISCREG_CPSR;
             }
             break;
           case MISCREG_UAO:
@@ -1772,7 +1772,7 @@ ISA::setMiscReg(int misc_reg, RegVal val)
                 CPSR cpsr = miscRegs[MISCREG_CPSR];
                 cpsr.uao = (uint8_t) ((CPSR) newVal).uao;
                 newVal = cpsr;
-                misc_reg = MISCREG_CPSR;
+                idx = MISCREG_CPSR;
             }
             break;
           case MISCREG_AT_S1E1R_Xt:
@@ -1817,18 +1817,18 @@ ISA::setMiscReg(int misc_reg, RegVal val)
             return;
           case MISCREG_L2CTLR:
             warn("miscreg L2CTLR (%s) written with %#x. ignored...\n",
-                 miscRegName[misc_reg], uint32_t(val));
+                 miscRegName[idx], uint32_t(val));
             break;
 
           // Generic Timer registers
           case MISCREG_CNTFRQ ... MISCREG_CNTVOFF:
           case MISCREG_CNTFRQ_EL0 ... MISCREG_CNTVOFF_EL2:
-            getGenericTimer().setMiscReg(misc_reg, newVal);
+            getGenericTimer().setMiscReg(idx, newVal);
             break;
           case MISCREG_ICC_AP0R0 ... MISCREG_ICH_LRC15:
           case MISCREG_ICC_PMR_EL1 ... MISCREG_ICC_IGRPEN1_EL3:
           case MISCREG_ICH_AP0R0_EL2 ... MISCREG_ICH_LR15_EL2:
-            getGICv3CPUInterface().setMiscReg(misc_reg, newVal);
+            getGICv3CPUInterface().setMiscReg(idx, newVal);
             return;
           case MISCREG_ZCR_EL3:
           case MISCREG_ZCR_EL2:
@@ -1837,7 +1837,7 @@ ISA::setMiscReg(int misc_reg, RegVal val)
                     (getCurSveVecLenInBits() >> 7) - 1);
             break;
         }
-        setMiscRegNoEffect(misc_reg, newVal);
+        setMiscRegNoEffect(idx, newVal);
     }
 }
 

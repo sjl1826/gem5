@@ -52,3 +52,8 @@ class SkewedAssociative(BaseIndexingPolicy):
     type = 'SkewedAssociative'
     cxx_class = 'gem5::SkewedAssociative'
     cxx_header = "mem/cache/tags/indexing_policies/skewed_associative.hh"
+
+class ZCache(BaseIndexingPolicy):
+    type = 'ZCache'
+    cxx_class = 'gem5::ZCache'
+    cxx_header = "mem/cache/tags/indexing_policies/zcache.hh"

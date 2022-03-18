@@ -48,7 +48,6 @@ namespace gem5
             // Potential TODO: Verify that numEntries can be used to calculate the number of lines to use
             // Potential TODO: Figure out if associativity == ways
             // The number of associative sets is obtained by dividing numEntries by associativity.
-            numLines = associativity * numEntries;
 
             for (unsigned int entry_idx = 0; entry_idx < (numEntries + associativity); entry_idx += 1)
             {
@@ -56,8 +55,8 @@ namespace gem5
                 indexingPolicy->setEntry(entry, entry_idx);
                 entry->replacementData = replacementPolicy->instantiateEntry();
             }
-            swapArrSet = gm_calloc<uint32_t>(numEntries + associativity);
-            swapArrWay = gm_calloc<uint32_t>(numEntries + associativity);
+            swapArrSet = calloc<uint32_t>(numEntries + associativity);
+            swapArrWay = calloc<uint32_t>(numEntries + associativity);
         }
 
         template <class Entry>
@@ -98,9 +97,10 @@ namespace gem5
             // Check if selected entries are all valid
             for (uint32_t i = 0; i < associativity; i++)
             {
-                isValid &= selected_entries[i]->isValid();
-                selected_entries[i]->setPosition(selected_entries[i]->getSet(),
-                                                 selected_entries[i]->getWay(), -1);
+                Entry *entry = static_cast<Entry *>(selected_entries[i]);
+                isValid &= entry->isValid();
+                selected_entries[i]->setPosition(entry->getSet(),
+                                                 entry->getWay(), -1);
             }
 
             uint32_t numCandidates = associativity;
@@ -124,10 +124,11 @@ namespace gem5
                     indexingPolicy->getPossibleEntries(addr);
                 for (uint32_t i = 0; i < associativity; i++)
                 {
-                    isValid &= extra_entries[i]->isValid();
-                    entries[numCandidates]->setPosition(extra_entries[i]->getSet(),
-                                                        extra_entries[i]->getWay(), entryId);
-                    unsigned int entryId2 = (extra_entries[i]->getSet() * associativity) + extra_entries[i]->getWay();
+                    Entry *entryTemp = static_cast<Entry *>(extra_entries[i]);
+                    isValid &= entryTemp->isValid();
+                    entries[numCandidates]->setPosition(entryTemp->getSet(),
+                                                        entryTemp->getWay(), entryId);
+                    unsigned int entryId2 = (entryTemp->getSet() * associativity) + entryTemp->getWay();
                     if (entryId != entryId2)
                     {
                         numCandidates++;
@@ -136,8 +137,8 @@ namespace gem5
             }
 
             // Only grab the candidates from the entries
-            std::vector<Entry *>::const_terator first = entries.begin();
-            std::vector<Entry *>::const_terator last = entries.begin() + numCandidates;
+            std::vector<Entry *>::const_iterator first = entries.begin();
+            std::vector<Entry *>::const_iterator last = entries.begin() + numCandidates;
             std::vector<Entry *> candidates(first, last);
             Entry *victim = static_cast<Entry *>(replacementPolicy->getVictim(
                 candidates));

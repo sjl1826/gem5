@@ -37,6 +37,7 @@
 #include <vector>
 
 #include "mem/cache/tags/indexing_policies/base.hh"
+#include "params/SkewedAssociative.hh"
 
 namespace gem5
 {
@@ -140,7 +141,7 @@ namespace gem5
 
     public:
         /** Convenience typedef. */
-        typedef ZCacheParams Params;
+        typedef SkewedAssociativeParams Params;
 
         /**
          * Construct and initialize this policy.
@@ -159,7 +160,7 @@ namespace gem5
          * @param index An unique index for the entry.
          */
         void
-        ZCache::setEntry(ReplaceableEntry *entry, const uint64_t index)
+        setEntry(ReplaceableEntry *entry, const uint64_t index)
         override;
 
         /**

@@ -42,7 +42,7 @@ namespace gem5
          * bool value is used as an additional tag data of the entry.
          */
         template <class Entry>
-        class ZCacheArray : Base
+        class ZCacheArray
         {
             static_assert(std::is_base_of_v<TaggedEntry, Entry>,
                           "Entry must derive from TaggedEntry");

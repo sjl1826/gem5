@@ -50,20 +50,15 @@ namespace gem5
         // Potential TODO: Figure out if associativity == ways
         // The number of associative sets is obtained by dividing numEntries by associativity.
         numLines = associativity * numEntries;
-        lookupMap = gm_calloc<int>(numLines);
-        addresses = gm_calloc<int>(numLines);
-        for(int i = 0; i < numLines; i++) 
-        {
-            lookupMap[i] = i;
-        }
-        walkTable = gm_calloc<int>(numEntries/associativity + 3);
 
-        for (unsigned int entry_idx = 0; entry_idx < numEntries; entry_idx += 1)
+        for (unsigned int entry_idx = 0; entry_idx < (numEntries+associativity); entry_idx += 1)
         {
             Entry *entry = &entries[entry_idx];
             indexingPolicy->setEntry(entry, entry_idx);
             entry->replacementData = replacementPolicy->instantiateEntry();
         }
+        swapArrSet = gm_calloc<uint32_t>(numEntries+associativity);
+        swapArrWay = gm_calloc<uint32_t>(numEntries+associativity);
     }
 
     template <class Entry>
@@ -105,38 +100,63 @@ namespace gem5
         for(uint32_t i = 0; i < associativity; i++)
         {
             isValid &= selected_entries[i]->isValid();
+            selected_entries[i]->setPosition(selected_entries[i]->getSet(), 
+                                                selected_entries[i]->getWay(), -1);
         }
 
         uint32_t numCandidates = associativity;
-
-        std::vector<ReplaceableEntry *> temp_entries;
 
         // BFS Algorithm to expand candidates at multiple levels
         for (const auto &location : selected_entries)
         {
             if (numCandidates >= numEntries || !isValid) { break; }
             Entry *entry = static_cast<Entry *>(location);
+            unsigned int entryId = (location->getSet() * associativity) + location->getWay();
+
             isValid &= entry->isValid();
             Addr tag = entry->getTag();
-            Addr fullAddress = indexingPolicy->regenerateAddr(tag, entry);
+            Addr entryAddr = indexingPolicy->regenerateAddr(tag, entry);
+
             // Generate extra entries at next level
             const std::vector<ReplaceableEntry *> extra_entries =
                 indexingPolicy->getPossibleEntries(addr);
             for (uint32_t i = 0; i < associativity; i++)
             {
                 isValid &= extra_entries[i]->isValid();
+                entries[numCandidates]->setPosition(extra_entries[i]->getSet(), 
+                                                    extra_entries[i]->getWay(), entryId);
+                unsigned int entryId2 = (extra_entries[i]->getSet() * associativity) + extra_entries[i]->getWay();
+                if (entryId != entryId2)
+                {
+                    numCandidates++;
+                }
             }
-            // Append extra results to temporary entry holder
-            temp_entries.insert(temp_entries.end(), extra_entries.begin(), extra_entries.end());
-            numCandidates += extra_entries.size();
         }
 
-        // Add all the new entries to selected entries
-        selected_entries.insert(selected_entries.end(), temp_entries.begin(), temp_entries.end());
+        // Only grab the candidates from the entries
+        std::vector<Entry *>::const_terator first = entries.begin();
+        std::vector<Entry *>::const_terator last = entries.begin()+numCandidates;
+        std::vector<Entry *> candidates(first, last);
         Entry *victim = static_cast<Entry *>(replacementPolicy->getVictim(
-            selected_entries));
+            candidates));
+
+        // Index in entries can be calculated by (set*associativity) + way
+        unsigned int victimIndex = (victim->getSet()*associativity) + victim->getWay();
+        int index = victimIndex;
+        int swapIndex = 0;
+        while (index >= 0)
+        {
+            swapArrSet[swapIndex] = entries[index]->getSet();
+            swapArrWay[swapIndex] = entries[index]->getWay();
+            index = entries[index]->getParent();
+            swapIndex++;
+        }
+
+        swapLen = swapIndex;
+
         // There is only one eviction for this replacement
         invalidate(victim);
+
         return victim;
     }
 
@@ -160,9 +180,17 @@ namespace gem5
     void
     ZCacheArray<Entry>::insertEntry(Addr addr, bool is_secure, Entry *entry)
     {
-        // TODO: Perform all the swaps in the lookup array
+        // TODO: Relocate all of the ancestors in the tree
+        for(uint32_t i = 0; i < swapLen-1; i++)
+        {
+            unsigned int index1 = (swapArrSet[i] * associativity) + swapArrWay[i];
+            unsigned int index2 = (swapArrSet[i+1] * associativity) + swapArrWay[i+1];
+            entries[index1] = entries[index2];
+        }
+
+        unsigned int lastId = (swapArrSet[swapLen-1] * associativity) + swapArrWay[swapLen-1];
+        indexingPolicy->setEntry(entry, lastId);
         entry->insert(indexingPolicy->extractTag(addr), is_secure);
-        // TODO: Set internal array of entry addresses equal to the new entry
         replacementPolicy->reset(entry->replacementData);
     }
 

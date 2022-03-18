@@ -49,7 +49,8 @@ namespace gem5
 
         /** Associativity of the container */
         const int associativity;
-        int numLines;
+
+        int swapLen;
         /**
          * Total number of entries, entries are organized in sets of the provided
          * associativity. The number of associative sets is obtained by dividing
@@ -63,9 +64,8 @@ namespace gem5
         /** Vector containing the entries of the container */
         std::vector<Entry> entries;
 
-        int* findMap; // physical locations mapped to local IDs
-        int* addresses; // local IDs mapped to addresses
-        int* walkTable; // physical locations of the data
+        int* swapArrSet; // swap array for set
+        int* swapArrWay; // swap array for way
 
 
     public:

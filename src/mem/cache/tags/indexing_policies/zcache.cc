@@ -207,6 +207,24 @@ namespace gem5
         return skew(addr >> setShift, way) & setMask;
     }
 
+    void
+    ZCache::setEntry(ReplaceableEntry *entry, const uint64_t index)
+    {
+        // Calculate set and way from entry index
+        const std::lldiv_t div_result = std::div((long long)index, assoc);
+        const uint32_t set = div_result.quot;
+        const uint32_t way = div_result.rem;
+
+        // Sanity check
+        assert(set < numSets);
+
+        // Assign a free pointer
+        sets[set][way] = entry;
+
+        // Inform the entry its position
+        entry->setPosition(set, way, -1);
+    }
+
     Addr
     ZCache::regenerateAddr(const Addr tag,
                                       const ReplaceableEntry *entry) const

@@ -73,6 +73,11 @@ class ReplaceableEntry
      */
     uint32_t _way;
 
+    /**
+     * Parent (relative position from replacement tree) to which this entry belongs.
+     */
+    uint32_t _parent;
+
   public:
     ReplaceableEntry() = default;
     virtual ~ReplaceableEntry() = default;
@@ -97,6 +102,21 @@ class ReplaceableEntry
     }
 
     /**
+     * Set the set, way, and parent. Should be called only once.
+     *
+     * @param set The set of this entry.
+     * @param way The way of this entry.
+     * @param parent The parent of this entry.
+     */
+    virtual void
+    setPosition(const uint32_t set, const uint32_t way, const uint32_t parent)
+    {
+      _set = set;
+      _way = way;
+      _parent = parent
+    }
+
+    /**
      * Get set number.
      *
      * @return The set to which this entry belongs.
@@ -109,6 +129,13 @@ class ReplaceableEntry
      * @return The way to which this entry belongs.
      */
     uint32_t getWay() const { return _way; }
+
+    /**
+     * Get parent number.
+     *
+     * @return The parent to which this entry belongs.
+     */
+    uint32_t getParent() const { return _parent; }
 
     /**
      * Prints relevant information about this entry.

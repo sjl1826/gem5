@@ -154,6 +154,16 @@ namespace gem5
         ~ZCache(){};
 
         /**
+         * Associate a pointer to an entry to its physical counterpart.
+         *
+         * @param entry The entry pointer.
+         * @param index An unique index for the entry.
+         */
+        void
+        ZCache::setEntry(ReplaceableEntry *entry, const uint64_t index)
+        override;
+
+        /**
          * Find all possible entries for insertion and replacement of an address.
          * Should be called immediately before ReplacementPolicy's findVictim()
          * not to break cache resizing.
@@ -162,7 +172,7 @@ namespace gem5
          * @return The possible entries.
          */
         std::vector<ReplaceableEntry *> getPossibleEntries(const Addr addr) const
-            override;
+        override;
 
         /**
          * Regenerate an entry's address from its tag and assigned set and way.

@@ -36,6 +36,7 @@
 
 namespace gem5
 {
+    struct ZCachePrefetcherParams;
     GEM5_DEPRECATED_NAMESPACE(Prefetcher, prefetch);
     namespace prefetch
     {
@@ -46,7 +47,7 @@ namespace gem5
          * bool value is used as an additional tag data of the entry.
          */
         template <class Entry>
-        class ZCacheArray
+        class ZCacheArray : Base
         {
             static_assert(std::is_base_of_v<TaggedEntry, Entry>,
                           "Entry must derive from TaggedEntry");

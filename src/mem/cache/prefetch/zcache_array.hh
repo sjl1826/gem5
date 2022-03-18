@@ -31,6 +31,7 @@
 
 #include "mem/cache/replacement_policies/base.hh"
 #include "mem/cache/tags/indexing_policies/base.hh"
+#include "mem/cache/tags/indexing_policies/zcache.hh"
 #include "mem/cache/tags/tagged_entry.hh"
 
 namespace gem5

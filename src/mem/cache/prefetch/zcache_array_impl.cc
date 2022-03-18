@@ -46,6 +46,9 @@ namespace gem5
                                            "AssociativeSet<> must be a power of 2");
         fatal_if(!isPowerOf2(assoc), "The associativity of an AssociativeSet<> "
                                      "must be a power of 2");
+        // Potential TODO: Verify that numEntries can be used to calculate the number of lines to use
+        // Potential TODO: Figure out if associativity == ways
+        // The number of associative sets is obtained by dividing numEntries by associativity.
         numLines = associativity * numEntries;
         lookupMap = gm_calloc<int>(numLines);
         addresses = gm_calloc<int>(numLines);
@@ -54,7 +57,7 @@ namespace gem5
             lookupMap[i] = i;
         }
         walkTable = gm_calloc<int>(numEntries/associativity + 3);
-        
+
         for (unsigned int entry_idx = 0; entry_idx < numEntries; entry_idx += 1)
         {
             Entry *entry = &entries[entry_idx];
@@ -94,24 +97,42 @@ namespace gem5
     Entry *
     ZCacheArray<Entry>::findVictim(Addr addr)
     {
-        /*
-        OBJECTS NEEDED:
-        Keep track of positions of replacement candidates visited durin ghte walk and the position of the best eviction candidate
-        ZCache Implementation
-        ** MAYBE WE CAN DO DFS INSTEAD TO AVOID THE WALK TABLE 
-        Get at least 20 candidates at three levels using the breadth first search method
-            Look at every candidate that we get at the first level
-            compute hash value address and for every non matching hash, we add candidates
-            Repeat it until satisfied
-        Get the best candidate -> replacementPolicy->getVictim()
-        There could be multiple candidates with the same lineID, so get the minimum that matches the best candidate
-        
-        */
-
-
         // Get possible entries to be victimized
         const std::vector<ReplaceableEntry *> selected_entries =
             indexingPolicy->getPossibleEntries(addr);
+        bool isValid = true;
+        // Check if selected entries are all valid
+        for(uint32_t i = 0; i < associativity; i++)
+        {
+            isValid &= selected_entries[i]->isValid();
+        }
+
+        uint32_t numCandidates = associativity;
+
+        std::vector<ReplaceableEntry *> temp_entries;
+
+        // BFS Algorithm to expand candidates at multiple levels
+        for (const auto &location : selected_entries)
+        {
+            if (numCandidates >= numEntries || !isValid) { break; }
+            Entry *entry = static_cast<Entry *>(location);
+            isValid &= entry->isValid();
+            Addr tag = entry->getTag();
+            Addr fullAddress = indexingPolicy->regenerateAddr(tag, entry);
+            // Generate extra entries at next level
+            const std::vector<ReplaceableEntry *> extra_entries =
+                indexingPolicy->getPossibleEntries(addr);
+            for (uint32_t i = 0; i < associativity; i++)
+            {
+                isValid &= extra_entries[i]->isValid();
+            }
+            // Append extra results to temporary entry holder
+            temp_entries.insert(temp_entries.end(), extra_entries.begin(), extra_entries.end());
+            numCandidates += extra_entries.size();
+        }
+
+        // Add all the new entries to selected entries
+        selected_entries.insert(selected_entries.end(), temp_entries.begin(), temp_entries.end());
         Entry *victim = static_cast<Entry *>(replacementPolicy->getVictim(
             selected_entries));
         // There is only one eviction for this replacement

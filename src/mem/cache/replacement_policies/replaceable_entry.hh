@@ -113,7 +113,7 @@ class ReplaceableEntry
     {
       _set = set;
       _way = way;
-      _parent = parent
+      _parent = parent;
     }
 
     /**

@@ -32,14 +32,8 @@
 #include "base/intmath.hh"
 #include "mem/cache/prefetch/zcache_array.hh"
 
-#include "params/ZCachePrefetcher.hh"
-
 namespace gem5
 {
-
-    GEM5_DEPRECATED_NAMESPACE(Prefetcher, prefetch);
-    namespace prefetch
-    {
         template <class Entry>
         ZCacheArray<Entry>::ZCacheArray(int assoc, int num_entries,
                                         BaseIndexingPolicy *idx_policy, replacement_policy::Base *rpl_policy,
@@ -47,9 +41,9 @@ namespace gem5
             : associativity(assoc), numEntries(num_entries), indexingPolicy(idx_policy),
               replacementPolicy(rpl_policy), entries(numEntries, init_value)
         {
-            fatal_if(!isPowerOf2(num_entries), "The number of entries of an "
-                                               "AssociativeSet<> must be a power of 2");
-            fatal_if(!isPowerOf2(assoc), "The associativity of an AssociativeSet<> "
+            fatal_if(!isPowerOf2(num_entries), "The number of entries of a "
+                                               "ZCache<> must be a power of 2");
+            fatal_if(!isPowerOf2(assoc), "The associativity of a ZCache<> "
                                          "must be a power of 2");
             // Potential TODO: Verify that numEntries can be used to calculate the number of lines to use
             // Potential TODO: Figure out if associativity == ways
@@ -209,7 +203,6 @@ namespace gem5
             entry->invalidate();
             replacementPolicy->invalidate(entry->replacementData);
         }
-    } // namespace prefetch
     } // namespace gem5
 
 #endif //__CACHE_PREFETCH_ZCACHE_ARRAY_IMPL_HH__

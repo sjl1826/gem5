@@ -43,6 +43,7 @@
 
 #include "base/sat_counter.hh"
 #include "mem/cache/prefetch/associative_set.hh"
+#include "mem/cache/prefetch/zcache_array.hh"
 #include "mem/cache/prefetch/queued.hh"
 
 namespace gem5
@@ -122,7 +123,7 @@ class IndirectMemory : public Queued
         }
     };
     /** Prefetch table */
-    AssociativeSet<PrefetchTableEntry> prefetchTable;
+    ZCacheArray<PrefetchTableEntry> prefetchTable;
 
     /** Indirect Pattern Detector entrt */
     struct IndirectPatternDetectorEntry : public TaggedEntry
@@ -161,7 +162,7 @@ class IndirectMemory : public Queued
         }
     };
     /** Indirect Pattern Detector (IPD) table */
-    AssociativeSet<IndirectPatternDetectorEntry> ipd;
+    ZCacheArray<IndirectPatternDetectorEntry> ipd;
 
     /** Entry currently tracking misses */
     IndirectPatternDetectorEntry *ipdEntryTrackingMisses;

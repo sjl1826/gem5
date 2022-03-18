@@ -32,6 +32,8 @@
 #include "base/intmath.hh"
 #include "mem/cache/prefetch/zcache_array.hh"
 
+#include "params/ZCachePrefetcher.hh"
+
 namespace gem5
 {
 

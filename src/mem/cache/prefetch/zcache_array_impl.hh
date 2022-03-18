@@ -140,7 +140,7 @@ namespace gem5
             // Only grab the candidates from the entries
             auto first = entries.begin();
             auto last = entries.begin() + numCandidates;
-            std::vector<Entry *> candidates(first, last);
+            std::vector<ReplaceableEntry *> candidates(first, last);
             Entry *victim = static_cast<Entry *>(replacementPolicy->getVictim(
                 candidates));
 

@@ -162,7 +162,7 @@ class IndirectMemory : public Queued
         }
     };
     /** Indirect Pattern Detector (IPD) table */
-    ZCacheArray<IndirectPatternDetectorEntry> ipd;
+    AssociativeSet<IndirectPatternDetectorEntry> ipd;
 
     /** Entry currently tracking misses */
     IndirectPatternDetectorEntry *ipdEntryTrackingMisses;

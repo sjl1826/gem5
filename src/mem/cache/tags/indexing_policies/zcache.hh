@@ -37,7 +37,6 @@
 #include <vector>
 
 #include "mem/cache/tags/indexing_policies/base.hh"
-#include "params/zcache.hh"
 
 namespace gem5
 {

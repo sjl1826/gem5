@@ -36,11 +36,6 @@
 
 namespace gem5
 {
-    struct ZCachePrefetcherParams;
-    GEM5_DEPRECATED_NAMESPACE(Prefetcher, prefetch);
-    namespace prefetch
-    {
-
         /**
          * Associative container based on the previosuly defined Entry type
          * Each element is indexed by a key of type Addr, an additional
@@ -173,7 +168,6 @@ namespace gem5
                 return entries.end();
             }
         };
-    } // namespace prefetcher
 
     } // namespace gem5
 

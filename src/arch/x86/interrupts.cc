@@ -54,6 +54,7 @@
 
 #include "arch/x86/intmessage.hh"
 #include "arch/x86/regs/apic.hh"
+#include "arch/x86/regs/misc.hh"
 #include "cpu/base.hh"
 #include "debug/LocalApic.hh"
 #include "dev/x86/i82094aa.hh"
@@ -615,6 +616,19 @@ X86ISA::Interrupts::Interrupts(const Params &p)
     regs[APIC_DESTINATION_FORMAT] = (uint32_t)(-1);
     ISRV = 0;
     IRRV = 0;
+
+    // At reset, all LVT entries start out zeroed, except for their mask bit.
+    LVTEntry masked = 0;
+    masked.masked = 1;
+
+    regs[APIC_LVT_TIMER] = masked;
+    regs[APIC_LVT_THERMAL_SENSOR] = masked;
+    regs[APIC_LVT_PERFORMANCE_MONITORING_COUNTERS] = masked;
+    regs[APIC_LVT_LINT0] = masked;
+    regs[APIC_LVT_LINT1] = masked;
+    regs[APIC_LVT_ERROR] = masked;
+
+    regs[APIC_SPURIOUS_INTERRUPT_VECTOR] = 0xff;
 
     regs[APIC_VERSION] = (5 << 16) | 0x14;
 }

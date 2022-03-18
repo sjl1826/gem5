@@ -43,10 +43,11 @@
         0x00: decode OPCODE_OP_BOTTOM3 {
             0x6: decode MODE_SUBMODE {
                 0x0: UD2();
-                default: WarnUnimpl::push_ES();
+                default: PUSH(sEv);
             }
             0x7: decode MODE_SUBMODE {
                 0x0: UD2();
+                0x4: POP_REAL(sEv);
                 default: WarnUnimpl::pop_ES();
             }
             default: MultiInst::ADD(OPCODE_OP_BOTTOM3,
@@ -57,7 +58,7 @@
         0x01: decode OPCODE_OP_BOTTOM3 {
             0x6: decode MODE_SUBMODE {
                 0x0: UD2();
-                default: WarnUnimpl::push_CS();
+                default: PUSH(sCv);
             }
             //Any time this is seen, it should generate a two byte opcode
             0x7: M5InternalError::error(
@@ -70,10 +71,11 @@
         0x02: decode OPCODE_OP_BOTTOM3 {
             0x6: decode MODE_SUBMODE {
                 0x0: UD2();
-                default: WarnUnimpl::push_SS();
+                default: PUSH(sSv);
             }
             0x7: decode MODE_SUBMODE {
                 0x0: UD2();
+                0x4: POP_REAL(sSv);
                 default: WarnUnimpl::pop_SS();
             }
             default: MultiInst::ADC(OPCODE_OP_BOTTOM3,
@@ -84,10 +86,11 @@
         0x03: decode OPCODE_OP_BOTTOM3 {
             0x6: decode MODE_SUBMODE {
                 0x0: UD2();
-                default: WarnUnimpl::push_DS();
+                default: PUSH(sDv);
             }
             0x7: decode MODE_SUBMODE {
                 0x0: UD2();
+                0x4: POP_REAL(sDv);
                 default: WarnUnimpl::pop_DS();
             }
             default: MultiInst::SBB(OPCODE_OP_BOTTOM3,
@@ -302,6 +305,7 @@
             0x1: CQO(rAv,rDv);
             0x2: decode MODE_SUBMODE {
                 0x0: UD2();
+                0x4: CALL_FAR_REAL(Iz);
                 default: WarnUnimpl::call_far_Ap();
             }
             0x3: WarnUnimpl::fwait(); //aka wait
@@ -362,10 +366,12 @@
             0x3: RET_NEAR();
             0x4: decode MODE_SUBMODE {
                 0x0: UD2();
+                0x4: LES_REAL(Gz,Mz);
                 default: WarnUnimpl::les_Gz_Mp();
             }
             0x5: decode MODE_SUBMODE {
                 0x0: UD2();
+                0x4: LDS_REAL(Gz,Mz);
                 default: WarnUnimpl::lds_Gz_Mp();
             }
             //0x6: group12_Eb_Ib();
@@ -386,9 +392,12 @@
                 // confuse the instruction type specialization code.
                 0x0: Inst::ENTER(Iw,Iw);
                 0x1: Inst::LEAVE();
-                0x2: ret_far_Iw();
+                0x2: decode MODE_SUBMODE {
+                    0x3, 0x4: Inst::RET_FAR_REAL(Iw);
+                    default: ret_far_Iw();
+                }
                 0x3: decode MODE_SUBMODE {
-                    0x3, 0x4: ret_far_real();
+                    0x3, 0x4: Inst::RET_FAR_REAL();
                     default: Inst::RET_FAR();
                 }
                 0x4: Inst::INT3();
@@ -403,7 +412,13 @@
                             }});
                     }
 
-                    default: Inst::INT(Ib);
+                    default: decode MODE_MODE {
+                        0x0: Inst::INT_LONG(Ib);
+                        0x1: decode MODE_SUBMODE {
+                            0x4: Inst::INT_REAL(Ib);
+                            default: Inst::INT_PROT(Ib);
+                        }
+                    }
                 }
                 0x6: decode MODE_SUBMODE {
                     0x0: Inst::UD2();
@@ -557,7 +572,10 @@
                 0x0: INC(Ev);
                 0x1: DEC(Ev);
                 0x2: CALL_NEAR(Ev);
-                0x3: WarnUnimpl::call_far_Mp();
+                0x3: decode MODE_SUBMODE {
+                    0x4: CALL_FAR_REAL(Mz);
+                    default: WarnUnimpl::call_far_Mp();
+                }
                 0x4: JMP(Ev);
                 0x5: decode MODE_SUBMODE {
                     0x0: JMP_FAR(Mz);

@@ -46,6 +46,7 @@
 
 #include "arch/x86/fs_workload.hh"
 #include "arch/x86/page_size.hh"
+#include "arch/x86/regs/int.hh"
 #include "arch/x86/regs/misc.hh"
 #include "arch/x86/regs/segment.hh"
 #include "arch/x86/se_workload.hh"
@@ -321,7 +322,8 @@ X86_64Process::initState()
             // LDT
             tc->setMiscReg(MISCREG_TSL, 0);
             SegAttr tslAttr = 0;
-            tslAttr.present = 1;
+            tslAttr.unusable = 1;
+            tslAttr.present = 0;
             tslAttr.type = 2;
             tc->setMiscReg(MISCREG_TSL_ATTR, tslAttr);
 
@@ -518,8 +520,11 @@ X86_64Process::initState()
         /* PF handler */
         pTable->map(PFHandlerVirtAddr, pfHandlerPhysAddr, PageBytes, false);
         /* MMIO region for m5ops */
-        pTable->map(MMIORegionVirtAddr, MMIORegionPhysAddr,
-                    16 * PageBytes, false);
+        auto m5op_range = system->m5opRange();
+        if (m5op_range.size()) {
+            pTable->map(MMIORegionVirtAddr, m5op_range.start(),
+                        m5op_range.size(), false);
+        }
     } else {
         for (int i = 0; i < contextIds.size(); i++) {
             ThreadContext * tc = system->threads[contextIds[i]];
@@ -680,6 +685,9 @@ I386Process::initState()
 
         // Set the LDT selector to 0 to deactivate it.
         tc->setMiscRegNoEffect(MISCREG_TSL, 0);
+        SegAttr attr = 0;
+        attr.unusable = 1;
+        tc->setMiscRegNoEffect(MISCREG_TSL_ATTR, attr);
 
         Efer efer = 0;
         efer.sce = 1; // Enable system call extensions.

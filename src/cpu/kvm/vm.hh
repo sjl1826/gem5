@@ -416,10 +416,8 @@ class KvmVM : public SimObject
     /** Global KVM interface */
     Kvm *kvm;
 
-    /**
-     * Initialize system pointer. Invoked by system object.
-     */
-    void setSystem(System *s);
+    /** Verify gem5 configuration will support KVM emulation */
+    bool validEnvironment() const;
 
     /**
       * Get the VCPUID for a given context

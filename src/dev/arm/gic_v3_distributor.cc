@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020 ARM Limited
+ * Copyright (c) 2019-2022 Arm Limited
  * All rights reserved
  *
  * The license below extends only to copyright in the software and shall
@@ -1085,6 +1085,9 @@ Gicv3Distributor::clearIrqCpuInterface(uint32_t int_id)
 void
 Gicv3Distributor::update()
 {
+    if (gic->blockIntUpdate())
+        return;
+
     // Find the highest priority pending SPI
     for (int int_id = Gicv3::SGI_MAX + Gicv3::PPI_MAX; int_id < itLines;
          int_id++) {
@@ -1176,6 +1179,29 @@ void
 Gicv3Distributor::deactivateIRQ(uint32_t int_id)
 {
     irqActive[int_id] = false;
+}
+
+void
+Gicv3Distributor::copy(Gicv3Registers *from, Gicv3Registers *to)
+{
+    const size_t size = itLines / 8;
+
+    gic->copyDistRegister(from, to, GICD_CTLR);
+
+    gic->clearDistRange(to, GICD_ICENABLER.start(), size);
+    gic->clearDistRange(to, GICD_ICPENDR.start(), size);
+    gic->clearDistRange(to, GICD_ICACTIVER.start(), size);
+
+    gic->copyDistRange(from, to, GICD_IGROUPR.start(), size);
+    gic->copyDistRange(from, to, GICD_ISENABLER.start(), size);
+    gic->copyDistRange(from, to, GICD_ISPENDR.start(), size);
+    gic->copyDistRange(from, to, GICD_ISACTIVER.start(), size);
+    gic->copyDistRange(from, to, GICD_IPRIORITYR.start(), size);
+    gic->copyDistRange(from, to, GICD_ITARGETSR.start(), size);
+    gic->copyDistRange(from, to, GICD_ICFGR.start(), size);
+    gic->copyDistRange(from, to, GICD_IGRPMODR.start(), size);
+    gic->copyDistRange(from, to, GICD_NSACR.start(), size);
+    gic->copyDistRange(from, to, GICD_IROUTER.start(), size);
 }
 
 void

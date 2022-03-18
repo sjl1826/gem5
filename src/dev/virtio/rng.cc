@@ -38,9 +38,7 @@
 
 #include "dev/virtio/rng.hh"
 
-#include <fcntl.h>
-#include <unistd.h>
-
+#include "base/random.hh"
 #include "debug/VIORng.hh"
 #include "params/VirtIORng.hh"
 #include "sim/system.hh"
@@ -50,8 +48,12 @@ namespace gem5
 
 VirtIORng::VirtIORng(const Params &params)
     : VirtIODeviceBase(params, ID_RNG, 0, 0),
+<<<<<<< HEAD
       qReq(params.system->physProxy, byteOrder, params.qSize,
            params.entropy_source, *this)
+=======
+      qReq(params.system->physProxy, byteOrder, params.qSize, *this)
+>>>>>>> develop
 {
     registerQueue(qReq);
 }
@@ -60,6 +62,7 @@ VirtIORng::~VirtIORng()
 {
 }
 
+<<<<<<< HEAD
 VirtIORng::RngQueue::RngQueue(PortProxy &proxy, ByteOrder bo,
     uint16_t size, const std::string &rng_file_path,
     VirtIORng &_parent)
@@ -70,6 +73,12 @@ VirtIORng::RngQueue::RngQueue(PortProxy &proxy, ByteOrder bo,
         DPRINTF(VIORng, "error when open entropy source: %s\n",
                 rng_file_path.c_str());
     }
+=======
+VirtIORng::RngQueue::RngQueue(PortProxy &proxy, ByteOrder bo, uint16_t size,
+    VirtIORng &_parent)
+    : VirtQueue(proxy, bo, size), parent(_parent)
+{
+>>>>>>> develop
 }
 
 void
@@ -89,6 +98,7 @@ VirtIORng::RngQueue::trySend()
         DPRINTF(VIORng, "Got descriptor (len: %i)\n", d->size());
         size_t len = 0;
         while (len < d->size()) {
+<<<<<<< HEAD
             uint8_t byte = 0;
             bool rng_read_success = false;
             if (rng_fd >= 0) {
@@ -99,6 +109,9 @@ VirtIORng::RngQueue::trySend()
                 // fallback to C++ std rng generator
                 byte = dist(rd_device);
             }
+=======
+            uint8_t byte = gem5::random_mt.random<uint8_t>();
+>>>>>>> develop
             d->chainWrite(len, &byte, sizeof(uint8_t));
             ++len;
         }

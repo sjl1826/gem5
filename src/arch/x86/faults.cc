@@ -43,6 +43,7 @@
 #include "arch/x86/generated/decoder.hh"
 #include "arch/x86/insts/static_inst.hh"
 #include "arch/x86/mmu.hh"
+#include "arch/x86/regs/misc.hh"
 #include "base/loader/symtab.hh"
 #include "base/trace.hh"
 #include "cpu/thread_context.hh"
@@ -73,7 +74,10 @@ X86FaultBase::invoke(ThreadContext *tc, const StaticInstPtr &inst)
         entry = isSoft() ? extern_label_longModeSoftInterrupt :
                            extern_label_longModeInterrupt;
     } else {
-        entry = extern_label_legacyModeInterrupt;
+        if (m5reg.submode == RealMode)
+            entry = extern_label_realModeInterrupt;
+        else
+            entry = extern_label_legacyModeInterrupt;
     }
     tc->setIntReg(INTREG_MICRO(1), vector);
     tc->setIntReg(INTREG_MICRO(7), pc.pc());
@@ -254,6 +258,7 @@ InitInterrupt::invoke(ThreadContext *tc, const StaticInstPtr &inst)
     tc->setMiscReg(MISCREG_IDTR_LIMIT, 0xffff);
 
     SegAttr tslAttr = 0;
+    tslAttr.unusable = 1;
     tslAttr.present = 1;
     tslAttr.type = 2; // LDT
     tc->setMiscReg(MISCREG_TSL, 0);
@@ -262,6 +267,7 @@ InitInterrupt::invoke(ThreadContext *tc, const StaticInstPtr &inst)
     tc->setMiscReg(MISCREG_TSL_ATTR, tslAttr);
 
     SegAttr trAttr = 0;
+    trAttr.unusable = 0;
     trAttr.present = 1;
     trAttr.type = 3; // Busy 16-bit TSS
     tc->setMiscReg(MISCREG_TR, 0);

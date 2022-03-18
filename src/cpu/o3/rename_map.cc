@@ -44,6 +44,7 @@
 #include <vector>
 
 #include "arch/vecregs.hh"
+#include "cpu/o3/dyn_inst.hh"
 #include "cpu/reg_class.hh"
 #include "debug/Rename.hh"
 
@@ -65,7 +66,7 @@ SimpleRenameMap::init(const RegClass &reg_class, SimpleFreeList *_freeList)
     assert(freeList == NULL);
     assert(map.empty());
 
-    map.resize(reg_class.size());
+    map.resize(reg_class.numRegs());
     freeList = _freeList;
     zeroReg = RegId(IntRegClass, reg_class.zeroReg());
 }
@@ -76,7 +77,7 @@ SimpleRenameMap::rename(const RegId& arch_reg)
     PhysRegIdPtr renamed_reg;
     // Record the current physical register that is renamed to the
     // requested architected register.
-    PhysRegIdPtr prev_reg = map[arch_reg.flatIndex()];
+    PhysRegIdPtr prev_reg = map[arch_reg.index()];
 
     if (arch_reg == zeroReg) {
         assert(prev_reg->index() == zeroReg.index());
@@ -91,7 +92,7 @@ SimpleRenameMap::rename(const RegId& arch_reg)
         renamed_reg->decrNumPinnedWrites();
     } else {
         renamed_reg = freeList->getReg();
-        map[arch_reg.flatIndex()] = renamed_reg;
+        map[arch_reg.index()] = renamed_reg;
         renamed_reg->setNumPinnedWrites(arch_reg.getNumPinnedWrites());
         renamed_reg->setNumPinnedWritesToComplete(
             arch_reg.getNumPinnedWrites() + 1);
@@ -114,12 +115,20 @@ UnifiedRenameMap::init(const BaseISA::RegClasses &regClasses,
 {
     regFile = _regFile;
 
-    intMap.init(regClasses.at(IntRegClass), &(freeList->intList));
-    floatMap.init(regClasses.at(FloatRegClass), &(freeList->floatList));
-    vecMap.init(regClasses.at(VecRegClass), &(freeList->vecList));
-    vecElemMap.init(regClasses.at(VecElemClass), &(freeList->vecElemList));
-    predMap.init(regClasses.at(VecPredRegClass), &(freeList->predList));
-    ccMap.init(regClasses.at(CCRegClass), &(freeList->ccList));
+    for (int i = 0; i < renameMaps.size(); i++)
+        renameMaps[i].init(regClasses.at(i), &(freeList->freeLists[i]));
+}
+
+bool
+UnifiedRenameMap::canRename(DynInstPtr inst) const
+{
+    for (int i = 0; i < renameMaps.size(); i++) {
+        if (inst->numDestRegs((RegClassType)i) >
+                renameMaps[i].numFreeEntries()) {
+            return false;
+        }
+    }
+    return true;
 }
 
 } // namespace o3

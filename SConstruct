@@ -98,6 +98,8 @@ import SCons.Tool
 #
 ########################################################################
 
+linker_options = ('bfd', 'gold', 'lld', 'mold')
+
 AddOption('--no-colors', dest='use_colors', action='store_false',
           help="Don't add color to abbreviated scons output")
 AddOption('--with-cxx-config', action='store_true',
@@ -106,7 +108,10 @@ AddOption('--default',
           help='Override which build_opts file to use for defaults')
 AddOption('--ignore-style', action='store_true',
           help='Disable style checking hooks')
-AddOption('--gold-linker', action='store_true', help='Use the gold linker')
+AddOption('--linker', action='store', default=None, choices=linker_options,
+          help=f'Select which linker to use ({", ".join(linker_options)})')
+AddOption('--gold-linker', action='store_const', const='gold', dest='linker',
+          help='Use the gold linker. Deprecated: Use --linker=gold')
 AddOption('--no-compress-debug', action='store_true',
           help="Don't compress debug info in build files")
 AddOption('--with-lto', action='store_true',
@@ -248,8 +253,6 @@ global_vars_file = os.path.join(build_root, 'variables.global')
 global_vars = Variables(global_vars_file, args=ARGUMENTS)
 
 global_vars.AddVariables(
-    ('CC', 'C compiler', environ.get('CC', main['CC'])),
-    ('CXX', 'C++ compiler', environ.get('CXX', main['CXX'])),
     ('CCFLAGS_EXTRA', 'Extra C and C++ compiler flags', ''),
     ('GEM5PY_CCFLAGS_EXTRA', 'Extra C and C++ gem5py compiler flags', ''),
     ('GEM5PY_LINKFLAGS_EXTRA', 'Extra marshal gem5py flags', ''),
@@ -257,7 +260,6 @@ global_vars.AddVariables(
     ('PYTHON_CONFIG', 'Python config binary to use',
      [ 'python3-config', 'python-config']
     ),
-    ('PROTOC', 'protoc tool', environ.get('PROTOC', 'protoc')),
     ('BATCH', 'Use batch pool for build and tests', False),
     ('BATCH_CMD', 'Batch pool submission command name', 'qdo'),
     ('M5_BUILD_CACHE', 'Cache built objects in this directory', False),
@@ -345,8 +347,25 @@ if main['GCC'] or main['CLANG']:
 
     with gem5_scons.Configure(main) as conf:
         conf.CheckLinkFlag('-Wl,--as-needed')
-    if GetOption('gold_linker'):
-        main.Append(LINKFLAGS='-fuse-ld=gold')
+
+    linker = GetOption('linker')
+    if linker:
+        with gem5_scons.Configure(main) as conf:
+            if not conf.CheckLinkFlag(f'-fuse-ld={linker}'):
+                error(f'Linker "{linker}" is not supported')
+            if linker == 'gold' and not GetOption('with_lto'):
+                # Tell the gold linker to use threads. The gold linker
+                # segfaults if both threads and LTO are enabled.
+                conf.CheckLinkFlag('-Wl,--threads')
+                conf.CheckLinkFlag(
+                        '-Wl,--thread-count=%d' % GetOption('num_jobs'))
+
+    # Treat warnings as errors but white list some warnings that we
+    # want to allow (e.g., deprecation warnings).
+    main.Append(CCFLAGS=['-Werror',
+                         '-Wno-error=deprecated-declarations',
+                         '-Wno-error=deprecated',
+                        ])
 
 else:
     error('\n'.join((
@@ -713,9 +732,6 @@ Build variables for {dir}:
     # Process variable settings.
     if env['USE_EFENCE']:
         env.Append(LIBS=['efence'])
-
-    if env['KVM_ISA'] != env['TARGET_ISA']:
-        env['USE_KVM'] = False
 
     # Save sticky variable settings back to current variables file
     sticky_vars.Save(current_vars_file, env)

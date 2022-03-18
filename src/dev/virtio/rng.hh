@@ -39,8 +39,6 @@
 #ifndef __DEV_VIRTIO_RNG_HH__
 #define __DEV_VIRTIO_RNG_HH__
 
-#include <random>
-
 #include "base/compiler.hh"
 #include "dev/virtio/base.hh"
 
@@ -76,9 +74,14 @@ class VirtIORng : public VirtIODeviceBase
         : public VirtQueue
     {
       public:
+<<<<<<< HEAD
         RngQueue(PortProxy &proxy, ByteOrder bo,
                 uint16_t size, const std::string &rng_file_path,
                 VirtIORng &_parent);
+=======
+        RngQueue(PortProxy &proxy, ByteOrder bo, uint16_t size,
+                 VirtIORng &_parent);
+>>>>>>> develop
         virtual ~RngQueue() {}
 
         void onNotify() { trySend(); }
@@ -90,12 +93,15 @@ class VirtIORng : public VirtIODeviceBase
 
       protected:
         VirtIORng &parent;
+<<<<<<< HEAD
       private:
         // system's special file for generating random number
         int rng_fd;
         // fallback random number generator
         std::random_device rd_device;
         std::uniform_int_distribution<int> dist;
+=======
+>>>>>>> develop
     };
     /** Receive queue for port 0 */
     RngQueue qReq;

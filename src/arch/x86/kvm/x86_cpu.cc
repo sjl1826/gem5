@@ -536,8 +536,14 @@ checkSeg(const char *name, const int idx, const struct kvm_segment &seg,
 X86KvmCPU::X86KvmCPU(const X86KvmCPUParams &params)
     : BaseKvmCPU(params),
       useXSave(params.useXSave)
+{}
+
+void
+X86KvmCPU::init()
 {
-    Kvm &kvm(*vm.kvm);
+    BaseKvmCPU::init();
+
+    Kvm &kvm = *vm->kvm;
 
     if (!kvm.capSetTSSAddress())
         panic("KVM: Missing capability (KVM_CAP_SET_TSS_ADDR)\n");
@@ -667,7 +673,7 @@ X86KvmCPU::dumpVCpuEvents() const
 void
 X86KvmCPU::dumpMSRs() const
 {
-    const Kvm::MSRIndexVector &supported_msrs(vm.kvm->getSupportedMSRs());
+    const Kvm::MSRIndexVector &supported_msrs = vm->kvm->getSupportedMSRs();
     auto msrs = newVarStruct<struct kvm_msrs, struct kvm_msr_entry>(
             supported_msrs.size());
 
@@ -735,12 +741,7 @@ setKvmSegmentReg(ThreadContext *tc, struct kvm_segment &kvm_seg,
     kvm_seg.l = attr.longMode;
     kvm_seg.g = attr.granularity;
     kvm_seg.avl = attr.avl;
-
-    // A segment is normally unusable when the selector is zero. There
-    // is a attr.unusable flag in gem5, but it seems unused. qemu
-    // seems to set this to 0 all the time, so we just do the same and
-    // hope for the best.
-    kvm_seg.unusable = 0;
+    kvm_seg.unusable = attr.unusable;
 }
 
 static inline void
@@ -1549,7 +1550,7 @@ const Kvm::MSRIndexVector &
 X86KvmCPU::getMsrIntersection() const
 {
     if (cachedMsrIntersection.empty()) {
-        const Kvm::MSRIndexVector &kvm_msrs(vm.kvm->getSupportedMSRs());
+        const Kvm::MSRIndexVector &kvm_msrs = vm->kvm->getSupportedMSRs();
 
         DPRINTF(Kvm, "kvm-x86: Updating MSR intersection\n");
         for (auto it = kvm_msrs.cbegin(); it != kvm_msrs.cend(); ++it) {

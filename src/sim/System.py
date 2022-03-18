@@ -38,7 +38,6 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from m5.SimObject import *
-from m5.defines import buildEnv
 from m5.params import *
 from m5.proxy import *
 
@@ -124,10 +123,5 @@ class System(SimObject):
 
     # SE mode doesn't use the ISA System subclasses, and so we need to set an
     # ISA specific value in this class directly.
-    m5ops_base = Param.Addr(
-        0xffff0000 if buildEnv['TARGET_ISA'] == 'x86' else 0,
-        "Base of the 64KiB PA range used for memory-mapped m5ops. Set to 0 "
-        "to disable.")
-
-    if buildEnv['USE_KVM']:
-        kvm_vm = Param.KvmVM(NULL, 'KVM VM (i.e., shared memory domain)')
+    m5ops_base = Param.Addr(0, "Base of the 64KiB PA range used for "
+       "memory-mapped m5ops. Set to 0 to disable.")

@@ -610,10 +610,6 @@ namespace ArmISA
         BaseISADevice &getGenericTimer();
         BaseISADevice &getGICv3CPUInterface();
 
-      private:
-        void assert32() { assert(((CPSR)readMiscReg(MISCREG_CPSR)).width); }
-        void assert64() { assert(!((CPSR)readMiscReg(MISCREG_CPSR)).width); }
-
       public:
         void clear();
 
@@ -642,6 +638,8 @@ namespace ArmISA
             return arm_isa->getSelfDebug();
         }
 
+        const ArmRelease* getRelease() const { return release; }
+
         RegVal readMiscRegNoEffect(int misc_reg) const;
         RegVal readMiscReg(int misc_reg);
         void setMiscRegNoEffect(int misc_reg, RegVal val);
@@ -658,8 +656,7 @@ namespace ArmISA
               case VecRegClass:
                 return RegId(VecRegClass, flattenVecIndex(regId.index()));
               case VecElemClass:
-                return RegId(VecElemClass, flattenVecElemIndex(regId.index()),
-                             regId.elemIndex());
+                return RegId(VecElemClass, flattenVecElemIndex(regId.index()));
               case VecPredRegClass:
                 return RegId(VecPredRegClass,
                              flattenVecPredIndex(regId.index()));
@@ -667,8 +664,10 @@ namespace ArmISA
                 return RegId(CCRegClass, flattenCCIndex(regId.index()));
               case MiscRegClass:
                 return RegId(MiscRegClass, flattenMiscIndex(regId.index()));
+              case InvalidRegClass:
+                return RegId();
             }
-            return RegId();
+            panic("Unrecognized register class %d.", regId.classValue());
         }
 
         int

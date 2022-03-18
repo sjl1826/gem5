@@ -56,7 +56,7 @@
 #include "debug/HtmCpu.hh"
 #include "debug/LSQ.hh"
 #include "debug/Writeback.hh"
-#include "params/O3CPU.hh"
+#include "params/BaseO3CPU.hh"
 
 namespace gem5
 {
@@ -68,7 +68,7 @@ LSQ::DcachePort::DcachePort(LSQ *_lsq, CPU *_cpu) :
     RequestPort(_cpu->name() + ".dcache_port", _cpu), lsq(_lsq), cpu(_cpu)
 {}
 
-LSQ::LSQ(CPU *cpu_ptr, IEW *iew_ptr, const O3CPUParams &params)
+LSQ::LSQ(CPU *cpu_ptr, IEW *iew_ptr, const BaseO3CPUParams &params)
     : cpu(cpu_ptr), iewStage(iew_ptr),
       _cacheBlocked(false),
       cacheStorePorts(params.cacheStorePorts), usedStorePorts(0),
@@ -784,15 +784,16 @@ LSQ::pushRequest(const DynInstPtr& inst, bool isLoad, uint8_t *data,
     assert(!isAtomic || (isAtomic && !needs_burst));
 
     const bool htm_cmd = isLoad && (flags & Request::HTM_CMD);
+    const bool tlbi_cmd = isLoad && (flags & Request::TLBI_CMD);
 
     if (inst->translationStarted()) {
         request = inst->savedRequest;
         assert(request);
     } else {
-        if (htm_cmd) {
+        if (htm_cmd || tlbi_cmd) {
             assert(addr == 0x0lu);
             assert(size == 8);
-            request = new HtmCmdRequest(&thread[tid], inst, flags);
+            request = new UnsquashableDirectRequest(&thread[tid], inst, flags);
         } else if (needs_burst) {
             request = new SplitDataRequest(&thread[tid], inst, isLoad, addr,
                     size, flags, data, res);
@@ -1089,6 +1090,23 @@ LSQ::LSQRequest::addReq(Addr addr, unsigned size,
                 _inst->pcState().instAddr(), _inst->contextId(),
                 std::move(_amo_op));
         req->setByteEnable(byte_enable);
+
+        /* If the request is marked as NO_ACCESS, setup a local access */
+        if (_flags.isSet(Request::NO_ACCESS)) {
+            req->setLocalAccessor(
+                [this, req](gem5::ThreadContext *tc, PacketPtr pkt) -> Cycles
+                {
+                    if ((req->isHTMStart() || req->isHTMCommit())) {
+                        auto& inst = this->instruction();
+                        assert(inst->inHtmTransactionalState());
+                        pkt->setHtmTransactional(
+                            inst->getHtmTransactionUid());
+                    }
+                    return Cycles(1);
+                }
+            );
+        }
+
         _reqs.push_back(req);
     }
 }
@@ -1360,15 +1378,17 @@ LSQ::DcachePort::recvReqRetry()
     lsq->recvReqRetry();
 }
 
-LSQ::HtmCmdRequest::HtmCmdRequest(LSQUnit* port, const DynInstPtr& inst,
-        const Request::Flags& flags_) :
+LSQ::UnsquashableDirectRequest::UnsquashableDirectRequest(
+    LSQUnit* port,
+    const DynInstPtr& inst,
+    const Request::Flags& flags_) :
     SingleDataRequest(port, inst, true, 0x0lu, 8, flags_,
         nullptr, nullptr, nullptr)
 {
 }
 
 void
-LSQ::HtmCmdRequest::initiateTranslation()
+LSQ::UnsquashableDirectRequest::initiateTranslation()
 {
     // Special commands are implemented as loads to avoid significant
     // changes to the cpu and memory interfaces
@@ -1404,8 +1424,9 @@ LSQ::HtmCmdRequest::initiateTranslation()
 }
 
 void
-LSQ::HtmCmdRequest::finish(const Fault &fault, const RequestPtr &req,
-        gem5::ThreadContext* tc, BaseMMU::Mode mode)
+LSQ::UnsquashableDirectRequest::finish(const Fault &fault,
+        const RequestPtr &req, gem5::ThreadContext* tc,
+        BaseMMU::Mode mode)
 {
     panic("unexpected behaviour - finish()");
 }

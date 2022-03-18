@@ -82,7 +82,8 @@ void EmulEnv::doModRM(const ExtMachInst & machInst)
                     base = INTREG_RDI;
                     break;
                   case 6:
-                    base = INTREG_RBP;
+                    // There is a special case when mod is 0 and rm is 6.
+                    base = machInst.modRM.mod == 0 ? INTREG_T0 : INTREG_RBP;
                     break;
                   case 7:
                     base = INTREG_RBX;
@@ -99,18 +100,16 @@ void EmulEnv::doModRM(const ExtMachInst & machInst)
             }
         }
     }
-    //Figure out what segment to use. This won't be entirely accurate since
-    //the presence of a displacement is supposed to make the instruction
-    //default to the data segment.
-    if ((base != INTREG_RBP && base != INTREG_RSP) || machInst.dispSize) {
+    //Figure out what segment to use.
+    if (base != INTREG_RBP && base != INTREG_RSP) {
         seg = SEGMENT_REG_DS;
-        //Handle any segment override that might have been in the instruction
-        int segFromInst = machInst.legacy.seg;
-        if (segFromInst)
-            seg = (SegmentRegIndex)(segFromInst - 1);
     } else {
         seg = SEGMENT_REG_SS;
     }
+    //Handle any segment override that might have been in the instruction
+    int segFromInst = machInst.legacy.seg;
+    if (segFromInst)
+        seg = (SegmentRegIndex)(segFromInst - 1);
 }
 
 void EmulEnv::setSeg(const ExtMachInst & machInst)

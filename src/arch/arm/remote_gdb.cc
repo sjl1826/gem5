@@ -168,6 +168,20 @@ namespace gem5
 
 using namespace ArmISA;
 
+namespace
+{
+
+// https://sourceware.org/gdb/current/onlinedocs/gdb/ARM-Breakpoint-Kinds.html
+enum class ArmBpKind
+{
+    THUMB = 2,
+    THUMB_2 = 3,
+    ARM = 4,
+};
+
+} // namespace
+
+
 static bool
 tryTranslate(ThreadContext *tc, Addr addr)
 {
@@ -362,10 +376,16 @@ RemoteGDB::gdbRegs()
 }
 
 bool
-RemoteGDB::checkBpLen(size_t len)
+RemoteGDB::checkBpKind(size_t kind)
 {
-    // 2 for Thumb ISA, 4 for ARM ISA.
-    return len == 2 || len == 4;
+    switch (ArmBpKind(kind)) {
+      case ArmBpKind::THUMB:
+      case ArmBpKind::THUMB_2:
+      case ArmBpKind::ARM:
+        return true;
+      default:
+        return false;
+    }
 }
 
 } // namespace gem5

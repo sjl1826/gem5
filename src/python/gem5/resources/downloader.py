@@ -32,6 +32,10 @@ import shutil
 import gzip
 import hashlib
 import base64
+import time
+import random
+from tempfile import gettempdir
+from urllib.error import HTTPError
 from typing import List, Dict
 
 from ..utils.filelock import FileLock
@@ -45,7 +49,7 @@ def _resources_json_version_required() -> str:
     """
     Specifies the version of resources.json to obtain.
     """
-    return "21.2"
+    return "develop"
 
 def _get_resources_json_uri() -> str:
     uri = (
@@ -55,6 +59,51 @@ def _get_resources_json_uri() -> str:
 
     return uri
 
+def _get_resources_json_at_url(url: str, use_caching: bool = True) -> Dict:
+    '''
+    Returns a resource JSON, in the form of a Python Dict. The URL location
+    of the JSON must be specified.
+
+    If `use_caching` is True, a copy of the JSON will be cached locally, and
+    used for up to an hour after retrieval.
+
+    **Note**: The URL is assumed to be the location within a Google Source
+    repository. Special processing is done to handle this. This is the primary
+    reason there are separate functions for handling the retrieving of the
+    resources JSON comapared to just using the `_download` function directly.
+
+    :param url: The URL of the JSON file.
+    :param use_caching: True if a cached file is to be used (up to an hour),
+    otherwise the file will be retrieved from the URL regardless. True by
+    default.
+    '''
+
+    file_path = os.path.join(
+        gettempdir(),
+        f"gem5-resources-{hashlib.md5(url.encode()).hexdigest()}.base64",
+    )
+
+    # The resources.json file can change at any time, but to avoid excessive
+    # retrieval we cache a version locally and use it for up to an hour before
+    # obtaining a fresh copy.
+    #
+    # `time.time()` and `os.path.getmtime(..)` both return an unix epoch time
+    # in seconds. Therefore, the value of "3600" here represents an hour
+    # difference between the two values. `time.time()` gets the current time,
+    # and `os.path.getmtime(<file>)` gets the modification time of the file.
+    # This is the most portable solution as other ideas, like "file creation
+    # time", are  not always the same concept between operating systems.
+    if not use_caching or not os.path.exists(file_path) or \
+        (time.time() - os.path.getmtime(file_path)) > 3600:
+                _download(url, file_path)
+
+    # Note: Google Source does not properly support obtaining files as raw
+    # text. Therefore when we open the URL we receive the JSON in base64
+    # format. Conversion is needed before it can be loaded.
+    with open(file_path) as file:
+        to_return = json.loads(base64.b64decode(file.read()).decode("utf-8"))
+
+    return to_return
 
 def _get_resources_json() -> Dict:
     """
@@ -63,23 +112,16 @@ def _get_resources_json() -> Dict:
     :returns: The Resources JSON (as a Python Dictionary).
     """
 
-    # Note: Google Source does not properly support obtaining files as raw
-    # text. Therefore when we open the URL we receive the JSON in base64
-    # format. Conversion is needed before it can be loaded.
-    with urllib.request.urlopen(_get_resources_json_uri()) as url:
-        to_return = json.loads(base64.b64decode(url.read()).decode("utf-8"))
+    to_return = _get_resources_json_at_url(url = _get_resources_json_uri())
 
     # If the current version pulled is not correct, look up the
     # "previous-versions" field to find the correct one.
     version = _resources_json_version_required()
     if to_return["version"] != version:
         if version in to_return["previous-versions"].keys():
-            with urllib.request.urlopen(
-                    to_return["previous-versions"][version]
-                ) as url:
-                to_return = json.loads(
-                    base64.b64decode(url.read()).decode("utf-8")
-                )
+            to_return = _get_resources_json_at_url(
+                url = to_return["previous-versions"][version]
+            )
         else:
             # This should never happen, but we thrown an exception to explain
             # that we can't find the version.
@@ -170,18 +212,56 @@ def _get_md5(file: str) -> str:
     return md5_object.hexdigest()
 
 
-def _download(url: str, download_to: str) -> None:
+def _download(
+    url: str,
+    download_to: str,
+    max_attempts: int = 6,
+) -> None:
     """
     Downloads a file.
+
+    The function will run a Truncated Exponential Backoff algorithm to retry
+    the download if the HTTP Status Code returned is deemed retryable.
 
     :param url: The URL of the file to download.
 
     :param download_to: The location the downloaded file is to be stored.
+
+    :param max_attempts: The max number of download attempts before stopping.
+    The default is 6. This translates to roughly 1 minute of retrying before
+    stopping.
     """
 
     # TODO: This whole setup will only work for single files we can get via
     # wget. We also need to support git clones going forward.
-    urllib.request.urlretrieve(url, download_to)
+
+
+    attempt = 0
+    while True:
+        # The loop will be broken on a successful download, via a `return`, or
+        # if an exception is raised. An exception will be raised if the maximum
+        # number of download attempts has been reached or if a HTTP status code
+        # other than 408, 429, or 5xx is received.
+        try:
+            urllib.request.urlretrieve(url, download_to)
+            return
+        except HTTPError as e:
+            # If the error code retrieved is retryable, we retry using a
+            # Truncated Exponential backoff algorithm, truncating after
+            # "max_attempts". We consider HTTP status codes 408, 429, and 5xx
+            # as retryable. If any other is retrieved we raise the error.
+            if e.code in (408, 429) or 500 <= e.code < 600:
+                attempt += 1
+                if attempt >= max_attempts:
+                    raise Exception(
+                        f"After {attempt} attempts, the resource json could "
+                        "not be retrieved. HTTP Status Code retrieved: "
+                        f"{e.code}"
+                    )
+                time.sleep((2 ** attempt) + random.uniform(0, 1))
+            else:
+                raise e
+
 
 
 def list_resources() -> List[str]:

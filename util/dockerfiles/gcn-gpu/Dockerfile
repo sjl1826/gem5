@@ -70,7 +70,7 @@ RUN git clone -b rocm-4.0.0 \
 
 WORKDIR /ROCclr
 # The patch allows us to avoid building blit kernels on-the-fly in gem5
-RUN wget -q -O - dist.gem5.org/dist/v21-2/rocm_patches/ROCclr.patch | git apply -v
+RUN wget -q -O - dist.gem5.org/dist/develop/rocm_patches/ROCclr.patch | git apply -v
 
 WORKDIR /ROCclr/build
 RUN cmake -DOPENCL_DIR="/ROCm-OpenCL-Runtime" \
@@ -105,11 +105,11 @@ RUN apt install rocm-cmake
 RUN git clone -b rocm-4.0.0 \
     https://github.com/ROCmSoftwarePlatform/rocBLAS.git && mkdir rocBLAS/build
 
-ENV HCC_AMDGPU_TARGET=gfx801
+ENV HCC_AMDGPU_TARGET=gfx801,gfx803,gfx900,gfx902
 WORKDIR rocBLAS
-# rocBLAS needs to be built from source otherwise gfx801 gets an error in HIP
+# rocBLAS needs to be built from source otherwise certain gfx versions get errors in HIP
 # about there being no GPU binary available
-RUN ./install.sh -d -a all -i
+RUN ./install.sh -d -i
 WORKDIR /
 
 # MIOpen dependencies + MIOpen

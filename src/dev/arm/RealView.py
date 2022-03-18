@@ -73,12 +73,14 @@ from m5.objects.CfiMemory import CfiMemory
 # emulation. Use a GIC model that automatically switches between
 # gem5's GIC model and KVM's GIC model if KVM is available.
 try:
-    from m5.objects.KvmGic import MuxingKvmGic
-    kvm_gicv2_class = MuxingKvmGic
+    from m5.objects.KvmGic import MuxingKvmGicV2, MuxingKvmGicV3
+    kvm_gicv2_class = MuxingKvmGicV2
+    kvm_gicv3_class = MuxingKvmGicV3
 except ImportError:
     # KVM support wasn't compiled into gem5. Fallback to a
     # software-only GIC.
     kvm_gicv2_class = Gic400
+    kvm_gicv3_class = Gicv3
     pass
 
 class AmbaPioDevice(BasicPioDevice):
@@ -750,6 +752,8 @@ class RealView(Platform):
         cur_sys.workload.boot_loader = boot_loader
         cur_sys.workload.load_addr_offset = load_offset
         cur_sys.workload.dtb_addr = load_offset + dtb_addr
+        # Use 0x200000 as this is the maximum size allowed for a DTB
+        cur_sys.workload.initrd_addr = cur_sys.workload.dtb_addr + 0x200000
         cur_sys.workload.cpu_release_addr = cur_sys.workload.dtb_addr - 8
 
     def generateDeviceTree(self, state):
@@ -1418,9 +1422,9 @@ class VExpress_GEM5_Foundation(VExpress_GEM5_Base):
 
     clcd = Pl111(pio_addr=0x1c1f0000, interrupt=ArmSPI(num=46))
 
-    gic = Gicv3(dist_addr=0x2f000000, redist_addr=0x2f100000,
-                maint_int=ArmPPI(num=25), gicv4=False,
-                its=NULL)
+    gic = kvm_gicv3_class(dist_addr=0x2f000000, redist_addr=0x2f100000,
+                          maint_int=ArmPPI(num=25), gicv4=False,
+                          its=NULL)
 
     pci_host = GenericArmPciHost(
         conf_base=0x40000000, conf_size='256MiB', conf_device_bits=12,

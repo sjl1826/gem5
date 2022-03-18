@@ -36,141 +36,144 @@
 
 namespace gem5
 {
-
-    /**
-     * Associative container based on the previosuly defined Entry type
-     * Each element is indexed by a key of type Addr, an additional
-     * bool value is used as an additional tag data of the entry.
-     */
-    template <class Entry>
-    class ZCacheArray
+    GEM5_DEPRECATED_NAMESPACE(Prefetcher, prefetch);
+    namespace prefetch
     {
-        static_assert(std::is_base_of_v<TaggedEntry, Entry>,
-                      "Entry must derive from TaggedEntry");
-
-        /** Associativity of the container */
-        const int associativity;
-
-        int swapLen;
-        /**
-         * Total number of entries, entries are organized in sets of the provided
-         * associativity. The number of associative sets is obtained by dividing
-         * numEntries by associativity.
-         */
-        const int numEntries;
-        /** Pointer to the indexing policy */
-        BaseIndexingPolicy *const indexingPolicy;
-        /** Pointer to the replacement policy */
-        replacement_policy::Base *const replacementPolicy;
-        /** Vector containing the entries of the container */
-        std::vector<Entry> entries;
-
-        int* swapArrSet; // swap array for set
-        int* swapArrWay; // swap array for way
-
-
-    public:
-        /**
-         * Public constructor
-         * @param assoc number of elements in each associative set
-         * @param num_entries total number of entries of the container, the number
-         *   of sets can be calculated dividing this balue by the 'assoc' value
-         * @param idx_policy indexing policy
-         * @param rpl_policy replacement policy
-         * @param init_val initial value of the elements of the set
-         */
-        ZCacheArray(int assoc, int num_entries, BaseIndexingPolicy *idx_policy,
-                    replacement_policy::Base *rpl_policy, Entry const &init_val = Entry());
 
         /**
-         * Find an entry within the set
-         * @param addr key element
-         * @param is_secure tag element
-         * @return returns a pointer to the wanted entry or nullptr if it does not
-         *  exist.
+         * Associative container based on the previosuly defined Entry type
+         * Each element is indexed by a key of type Addr, an additional
+         * bool value is used as an additional tag data of the entry.
          */
-        Entry *findEntry(Addr addr, bool is_secure) const;
-
-        /**
-         * Do an access to the entry, this is required to
-         * update the replacement information data.
-         * @param entry the accessed entry
-         */
-        void accessEntry(Entry *entry);
-
-        /**
-         * Find a victim to be replaced
-         * @param addr key to select the possible victim
-         * @result entry to be victimized
-         */
-        Entry *findVictim(Addr addr);
-
-        /**
-         * Find the set of entries that could be replaced given
-         * that we want to add a new entry with the provided key
-         * @param addr key to select the set of entries
-         * @result vector of candidates matching with the provided key
-         */
-        std::vector<Entry *> getPossibleEntries(const Addr addr) const;
-
-        /**
-         * Indicate that an entry has just been inserted
-         * @param addr key of the container
-         * @param is_secure tag component of the container
-         * @param entry pointer to the container entry to be inserted
-         */
-        void insertEntry(Addr addr, bool is_secure, Entry *entry);
-
-        /**
-         * Invalidate an entry and its respective replacement data.
-         *
-         * @param entry Entry to be invalidated.
-         */
-        void invalidate(Entry *entry);
-
-        /** Iterator types */
-        using const_iterator = typename std::vector<Entry>::const_iterator;
-        using iterator = typename std::vector<Entry>::iterator;
-
-        /**
-         * Returns an iterator to the first entry of the dictionary
-         * @result iterator to the first element
-         */
-        iterator begin()
+        template <class Entry>
+        class ZCacheArray
         {
-            return entries.begin();
-        }
+            static_assert(std::is_base_of_v<TaggedEntry, Entry>,
+                          "Entry must derive from TaggedEntry");
 
-        /**
-         * Returns an iterator pointing to the end of the the dictionary
-         * (placeholder element, should not be accessed)
-         * @result iterator to the end element
-         */
-        iterator end()
-        {
-            return entries.end();
-        }
+            /** Associativity of the container */
+            const int associativity;
 
-        /**
-         * Returns an iterator to the first entry of the dictionary
-         * @result iterator to the first element
-         */
-        const_iterator begin() const
-        {
-            return entries.begin();
-        }
+            int swapLen;
+            /**
+             * Total number of entries, entries are organized in sets of the provided
+             * associativity. The number of associative sets is obtained by dividing
+             * numEntries by associativity.
+             */
+            const int numEntries;
+            /** Pointer to the indexing policy */
+            BaseIndexingPolicy *const indexingPolicy;
+            /** Pointer to the replacement policy */
+            replacement_policy::Base *const replacementPolicy;
+            /** Vector containing the entries of the container */
+            std::vector<Entry> entries;
 
-        /**
-         * Returns an iterator pointing to the end of the the dictionary
-         * (placeholder element, should not be accessed)
-         * @result iterator to the end element
-         */
-        const_iterator end() const
-        {
-            return entries.end();
-        }
-    };
+            int *swapArrSet; // swap array for set
+            int *swapArrWay; // swap array for way
 
-} // namespace gem5
+        public:
+            /**
+             * Public constructor
+             * @param assoc number of elements in each associative set
+             * @param num_entries total number of entries of the container, the number
+             *   of sets can be calculated dividing this balue by the 'assoc' value
+             * @param idx_policy indexing policy
+             * @param rpl_policy replacement policy
+             * @param init_val initial value of the elements of the set
+             */
+            ZCacheArray(int assoc, int num_entries, BaseIndexingPolicy *idx_policy,
+                        replacement_policy::Base *rpl_policy, Entry const &init_val = Entry());
+
+            /**
+             * Find an entry within the set
+             * @param addr key element
+             * @param is_secure tag element
+             * @return returns a pointer to the wanted entry or nullptr if it does not
+             *  exist.
+             */
+            Entry *findEntry(Addr addr, bool is_secure) const;
+
+            /**
+             * Do an access to the entry, this is required to
+             * update the replacement information data.
+             * @param entry the accessed entry
+             */
+            void accessEntry(Entry *entry);
+
+            /**
+             * Find a victim to be replaced
+             * @param addr key to select the possible victim
+             * @result entry to be victimized
+             */
+            Entry *findVictim(Addr addr);
+
+            /**
+             * Find the set of entries that could be replaced given
+             * that we want to add a new entry with the provided key
+             * @param addr key to select the set of entries
+             * @result vector of candidates matching with the provided key
+             */
+            std::vector<Entry *> getPossibleEntries(const Addr addr) const;
+
+            /**
+             * Indicate that an entry has just been inserted
+             * @param addr key of the container
+             * @param is_secure tag component of the container
+             * @param entry pointer to the container entry to be inserted
+             */
+            void insertEntry(Addr addr, bool is_secure, Entry *entry);
+
+            /**
+             * Invalidate an entry and its respective replacement data.
+             *
+             * @param entry Entry to be invalidated.
+             */
+            void invalidate(Entry *entry);
+
+            /** Iterator types */
+            using const_iterator = typename std::vector<Entry>::const_iterator;
+            using iterator = typename std::vector<Entry>::iterator;
+
+            /**
+             * Returns an iterator to the first entry of the dictionary
+             * @result iterator to the first element
+             */
+            iterator begin()
+            {
+                return entries.begin();
+            }
+
+            /**
+             * Returns an iterator pointing to the end of the the dictionary
+             * (placeholder element, should not be accessed)
+             * @result iterator to the end element
+             */
+            iterator end()
+            {
+                return entries.end();
+            }
+
+            /**
+             * Returns an iterator to the first entry of the dictionary
+             * @result iterator to the first element
+             */
+            const_iterator begin() const
+            {
+                return entries.begin();
+            }
+
+            /**
+             * Returns an iterator pointing to the end of the the dictionary
+             * (placeholder element, should not be accessed)
+             * @result iterator to the end element
+             */
+            const_iterator end() const
+            {
+                return entries.end();
+            }
+        };
+    } // namespace prefetcher
+
+    } // namespace gem5
 
 #endif //__CACHE_PREFETCH_ZCACHE_ARRAY_HH__

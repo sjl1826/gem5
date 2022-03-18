@@ -121,7 +121,7 @@ namespace gem5
 
                 // Generate extra entries at next level
                 const std::vector<ReplaceableEntry *> extra_entries =
-                    indexingPolicy->getPossibleEntries(addr);
+                    indexingPolicy->getPossibleEntries(entryAddr);
                 for (uint32_t i = 0; i < associativity; i++)
                 {
                     Entry *entryTemp = static_cast<Entry *>(extra_entries[i]);
@@ -138,8 +138,8 @@ namespace gem5
             }
 
             // Only grab the candidates from the entries
-            typename std::vector<Entry *>::const_iterator first = entries.begin();
-            typename std::vector<Entry *>::const_iterator last = entries.begin() + numCandidates;
+            auto first = entries.begin();
+            auto last = entries.begin() + numCandidates;
             std::vector<Entry *> candidates(first, last);
             Entry *victim = static_cast<Entry *>(replacementPolicy->getVictim(
                 candidates));

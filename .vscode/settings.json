@@ -1,0 +1,20 @@
+{
+    "files.associations": {
+        "__string": "cpp",
+        "__tree": "cpp",
+        "deque": "cpp",
+        "functional": "cpp",
+        "hash_map": "cpp",
+        "hash_set": "cpp",
+        "iterator": "cpp",
+        "list": "cpp",
+        "map": "cpp",
+        "queue": "cpp",
+        "set": "cpp",
+        "string": "cpp",
+        "unordered_map": "cpp",
+        "unordered_set": "cpp",
+        "vector": "cpp",
+        "__hash_table": "cpp"
+    }
+}

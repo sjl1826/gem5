@@ -126,8 +126,9 @@ namespace gem5
                 {
                     Entry *entryTemp = static_cast<Entry *>(extra_entries[i]);
                     isValid &= entryTemp->isValid();
-                    entries[numCandidates]->setPosition(entryTemp->getSet(),
-                                                        entryTemp->getWay(), entryId);
+                    Entry *canEntry = &entries[numCandidates];
+                    canEntry->setPosition(entryTemp->getSet(),
+                                entryTemp->getWay(), entryId);
                     unsigned int entryId2 = (entryTemp->getSet() * associativity) + entryTemp->getWay();
                     if (entryId != entryId2)
                     {
@@ -137,8 +138,8 @@ namespace gem5
             }
 
             // Only grab the candidates from the entries
-            std::vector<Entry *>::const_iterator first = entries.begin();
-            std::vector<Entry *>::const_iterator last = entries.begin() + numCandidates;
+            typename std::vector<Entry *>::const_iterator first = entries.begin();
+            typename std::vector<Entry *>::const_iterator last = entries.begin() + numCandidates;
             std::vector<Entry *> candidates(first, last);
             Entry *victim = static_cast<Entry *>(replacementPolicy->getVictim(
                 candidates));
@@ -149,9 +150,10 @@ namespace gem5
             int swapIndex = 0;
             while (index >= 0)
             {
-                swapArrSet[swapIndex] = entries[index]->getSet();
-                swapArrWay[swapIndex] = entries[index]->getWay();
-                index = entries[index]->getParent();
+                Entry *currEntry = &entries[index];
+                swapArrSet[swapIndex] = currEntry->getSet();
+                swapArrWay[swapIndex] = currEntry->getWay();
+                index = currEntry->getParent();
                 swapIndex++;
             }
 

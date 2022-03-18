@@ -55,8 +55,8 @@ namespace gem5
                 indexingPolicy->setEntry(entry, entry_idx);
                 entry->replacementData = replacementPolicy->instantiateEntry();
             }
-            swapArrSet = calloc<uint32_t>(numEntries + associativity);
-            swapArrWay = calloc<uint32_t>(numEntries + associativity);
+            swapArrSet = malloc<uint32_t>(numEntries + associativity);
+            swapArrWay = malloc<uint32_t>(numEntries + associativity);
         }
 
         template <class Entry>

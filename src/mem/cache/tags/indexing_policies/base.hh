@@ -118,7 +118,7 @@ class BaseIndexingPolicy : public SimObject
      * @param entry The entry pointer.
      * @param index An unique index for the entry.
      */
-    void setEntry(ReplaceableEntry* entry, const uint64_t index);
+    virtual void setEntry(ReplaceableEntry* entry, const uint64_t index);
 
     /**
      * Get an entry based on its set and way. All entries must have been set

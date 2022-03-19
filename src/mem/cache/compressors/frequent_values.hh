@@ -40,6 +40,7 @@
 #include "mem/cache/compressors/base.hh"
 #include "mem/cache/compressors/encoders/huffman.hh"
 #include "mem/cache/prefetch/associative_set.hh"
+#include "mem/cache/prefetch/zcache_array.hh"
 #include "sim/eventq.hh"
 #include "sim/probe/probe.hh"
 
@@ -147,7 +148,7 @@ class FrequentValues : public Base
      * The Value Frequency Table, a small cache that keeps track and estimates
      * the frequency distribution of values in the cache.
      */
-    AssociativeSet<VFTEntry> VFT;
+    ZCacheArray<VFTEntry> VFT;
 
     /**
      * A pseudo value is used as the representation of uncompressed values.

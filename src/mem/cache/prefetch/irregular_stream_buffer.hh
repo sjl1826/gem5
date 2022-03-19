@@ -41,6 +41,7 @@
 #include "base/callback.hh"
 #include "base/sat_counter.hh"
 #include "mem/cache/prefetch/associative_set.hh"
+#include "mem/cache/prefetch/zcache_array.hh"
 #include "mem/cache/prefetch/queued.hh"
 
 namespace gem5
@@ -71,7 +72,7 @@ class IrregularStreamBuffer : public Queued
         bool lastAddressSecure;
     };
     /** Map of PCs to Training unit entries */
-    AssociativeSet<TrainingUnitEntry> trainingUnit;
+    ZCacheArray<TrainingUnitEntry> trainingUnit;
 
     /** Address Mapping entry, holds an address and a confidence counter */
     struct AddressMapping
@@ -106,9 +107,9 @@ class IrregularStreamBuffer : public Queued
     };
 
     /** Physical-to-Structured mappings table */
-    AssociativeSet<AddressMappingEntry> psAddressMappingCache;
+    ZCacheArray<AddressMappingEntry> psAddressMappingCache;
     /** Structured-to-Physical mappings table */
-    AssociativeSet<AddressMappingEntry> spAddressMappingCache;
+    ZCacheArray<AddressMappingEntry> spAddressMappingCache;
     /**
      * Counter of allocated structural addresses, increased by "chunkSize",
      * each time a new structured address is allocated

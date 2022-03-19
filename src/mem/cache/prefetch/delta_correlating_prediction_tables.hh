@@ -31,6 +31,7 @@
 
 #include "base/circular_queue.hh"
 #include "mem/cache/prefetch/associative_set.hh"
+#include "mem/cache/prefetch/zcache_array.hh"
 #include "mem/cache/prefetch/queued.hh"
 
 namespace gem5
@@ -104,7 +105,7 @@ class DeltaCorrelatingPredictionTables : public SimObject
 
     };
     /** The main table */
-    AssociativeSet<DCPTEntry> table;
+    ZCacheArray<DCPTEntry> table;
 
   public:
     DeltaCorrelatingPredictionTables(

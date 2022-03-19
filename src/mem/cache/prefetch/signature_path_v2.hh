@@ -43,6 +43,7 @@
 
 #include "mem/cache/prefetch/associative_set.hh"
 #include "mem/cache/prefetch/signature_path.hh"
+#include "mem/cache/prefetch/zcache_array.hh"
 #include "mem/packet.hh"
 
 namespace gem5
@@ -67,7 +68,7 @@ class SignaturePathV2 : public SignaturePath
                                delta(0) {}
     };
     /** Global History Register */
-    AssociativeSet<GlobalHistoryEntry> globalHistoryRegister;
+    ZCacheArray<GlobalHistoryEntry> globalHistoryRegister;
 
     double calculateLookaheadConfidence(PatternEntry const &sig,
             PatternStrideEntry const &lookahead) const override;

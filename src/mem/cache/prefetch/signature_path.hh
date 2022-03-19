@@ -42,6 +42,7 @@
 
 #include "base/sat_counter.hh"
 #include "mem/cache/prefetch/associative_set.hh"
+#include "mem/cache/prefetch/zcache_array.hh"
 #include "mem/cache/prefetch/queued.hh"
 #include "mem/packet.hh"
 
@@ -84,7 +85,7 @@ class SignaturePath : public Queued
         {}
     };
     /** Signature table */
-    AssociativeSet<SignatureEntry> signatureTable;
+    ZCacheArray<SignatureEntry> signatureTable;
 
     /** A stride entry with its counter */
     struct PatternStrideEntry
@@ -148,7 +149,7 @@ class SignaturePath : public Queued
         PatternStrideEntry &getStrideEntry(stride_t stride);
     };
     /** Pattern table */
-    AssociativeSet<PatternEntry> patternTable;
+    ZCacheArray<PatternEntry> patternTable;
 
     /**
      * Generates a new signature from an existing one and a new stride

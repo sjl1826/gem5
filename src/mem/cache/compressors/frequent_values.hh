@@ -148,7 +148,7 @@ class FrequentValues : public Base
      * The Value Frequency Table, a small cache that keeps track and estimates
      * the frequency distribution of values in the cache.
      */
-    ZCacheArray<VFTEntry> VFT;
+    AssociativeSet<VFTEntry> VFT;
 
     /**
      * A pseudo value is used as the representation of uncompressed values.

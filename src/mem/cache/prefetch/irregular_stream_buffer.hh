@@ -72,7 +72,7 @@ class IrregularStreamBuffer : public Queued
         bool lastAddressSecure;
     };
     /** Map of PCs to Training unit entries */
-    ZCacheArray<TrainingUnitEntry> trainingUnit;
+    AssociativeSet<TrainingUnitEntry> trainingUnit;
 
     /** Address Mapping entry, holds an address and a confidence counter */
     struct AddressMapping
@@ -107,9 +107,9 @@ class IrregularStreamBuffer : public Queued
     };
 
     /** Physical-to-Structured mappings table */
-    ZCacheArray<AddressMappingEntry> psAddressMappingCache;
+    AssociativeSet<AddressMappingEntry> psAddressMappingCache;
     /** Structured-to-Physical mappings table */
-    ZCacheArray<AddressMappingEntry> spAddressMappingCache;
+    AssociativeSet<AddressMappingEntry> spAddressMappingCache;
     /**
      * Counter of allocated structural addresses, increased by "chunkSize",
      * each time a new structured address is allocated

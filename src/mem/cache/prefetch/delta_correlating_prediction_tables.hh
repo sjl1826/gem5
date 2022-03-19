@@ -105,7 +105,7 @@ class DeltaCorrelatingPredictionTables : public SimObject
 
     };
     /** The main table */
-    ZCacheArray<DCPTEntry> table;
+    AssociativeSet<DCPTEntry> table;
 
   public:
     DeltaCorrelatingPredictionTables(

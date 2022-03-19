@@ -85,7 +85,7 @@ class SignaturePath : public Queued
         {}
     };
     /** Signature table */
-    ZCacheArray<SignatureEntry> signatureTable;
+    AssociativeSet<SignatureEntry> signatureTable;
 
     /** A stride entry with its counter */
     struct PatternStrideEntry
@@ -149,7 +149,7 @@ class SignaturePath : public Queued
         PatternStrideEntry &getStrideEntry(stride_t stride);
     };
     /** Pattern table */
-    ZCacheArray<PatternEntry> patternTable;
+    AssociativeSet<PatternEntry> patternTable;
 
     /**
      * Generates a new signature from an existing one and a new stride

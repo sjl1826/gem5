@@ -144,7 +144,7 @@ class PIF : public Queued
          * The index table is a small cache-like structure that facilitates
          * fast search of the history buffer.
          */
-        ZCacheArray<IndexEntry> index;
+        AssociativeSet<IndexEntry> index;
 
         /**
          * A Stream Address Buffer (SAB) tracks a window of consecutive

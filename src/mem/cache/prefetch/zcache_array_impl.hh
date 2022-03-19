@@ -188,7 +188,6 @@ namespace gem5
         void
         ZCacheArray<Entry>::insertEntry(Addr addr, bool is_secure, Entry *entry)
         {
-            // TODO: Relocate all of the ancestors in the tree
             for (uint32_t i = 0; i < swapLen - 1; i++)
             {
                 unsigned int index1 = (swapArrSet[i] * associativity) + swapArrWay[i];
